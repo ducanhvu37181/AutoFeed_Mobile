@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,9 +22,13 @@ import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScheduleScreen() {
+fun ScheduleScreen(
+    onLogout: () -> Unit = {},
+    onNavigateToDashboard: () -> Unit = {}
+) {
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Pending", "In Progress", "Completed")
+    var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -38,8 +43,46 @@ fun ScheduleScreen() {
                     IconButton(onClick = { }) {
                         Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier
+                                .background(Color.White)
+                                .width(200.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "John Farmer",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Color(0xFF1A1A1A)
+                                )
+                                Text(
+                                    text = "Farmer",
+                                    fontSize = 12.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            DropdownMenuItem(
+                                text = { Text("Logout", color = Color(0xFF455A64)) },
+                                onClick = {
+                                    showMenu = false
+                                    onLogout()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Logout,
+                                        contentDescription = null,
+                                        tint = Color(0xFF455A64)
+                                    )
+                                }
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF00897B))
@@ -51,7 +94,7 @@ fun ScheduleScreen() {
                     icon = { Icon(Icons.Default.GridView, contentDescription = "Dashboard") },
                     label = { Text("Dashboard") },
                     selected = false,
-                    onClick = {}
+                    onClick = onNavigateToDashboard
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Inventory2, contentDescription = "Inventory") },
