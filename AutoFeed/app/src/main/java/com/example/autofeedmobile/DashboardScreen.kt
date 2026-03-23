@@ -29,7 +29,9 @@ import kotlinx.coroutines.launch
 fun DashboardScreen(
     userId: Int,
     onLogout: () -> Unit = {},
-    onNavigateToSchedule: () -> Unit = {}
+    onNavigateToSchedule: () -> Unit = {},
+    onNavigateToInventory: () -> Unit = {},
+    onNavigateToRequests: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
@@ -128,7 +130,7 @@ fun DashboardScreen(
                     icon = { Icon(Icons.Default.Inventory2, contentDescription = "Inventory") },
                     label = { Text("Inventory") },
                     selected = false,
-                    onClick = {}
+                    onClick = onNavigateToInventory
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
@@ -140,7 +142,7 @@ fun DashboardScreen(
                     icon = { Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Requests") },
                     label = { Text("Requests") },
                     selected = false,
-                    onClick = {}
+                    onClick = onNavigateToRequests
                 )
             }
         }
