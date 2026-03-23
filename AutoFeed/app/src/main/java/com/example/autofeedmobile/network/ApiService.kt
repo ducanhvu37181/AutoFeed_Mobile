@@ -1,7 +1,11 @@
 package com.example.autofeedmobile.network
 
 import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ApiService {
@@ -10,4 +14,16 @@ interface ApiService {
         @Query("usernameOrEmail") usernameOrEmail: String,
         @Query("password") password: String
     ): Response<LoginResponse>
+
+    @GET("api/Schedule/user/{userId}")
+    suspend fun getSchedules(@Path("userId") userId: Int): Response<ScheduleListResponse>
+
+    @GET("api/Schedule/{id}")
+    suspend fun getScheduleDetail(@Path("id") id: Int): Response<ScheduleDetailResponse>
+
+    @PATCH("api/Schedule/{id}/status")
+    suspend fun updateScheduleStatus(
+        @Path("id") id: Int,
+        @Body status: String
+    ): Response<Unit>
 }

@@ -18,21 +18,25 @@ class MainActivity : ComponentActivity() {
         setContent {
             AutoFeedMobileTheme {
                 var currentScreen by remember { mutableStateOf(Screen.Login) }
+                var userId by remember { mutableIntStateOf(-1) }
 
                 when (currentScreen) {
                     Screen.Login -> {
-                        LoginScreen(onLoginSuccess = {
+                        LoginScreen(onLoginSuccess = { id ->
+                            userId = id
                             currentScreen = Screen.Dashboard
                         })
                     }
                     Screen.Dashboard -> {
                         DashboardScreen(
+                            userId = userId,
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule }
                         )
                     }
                     Screen.Schedule -> {
                         ScheduleScreen(
+                            userId = userId,
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard }
                         )

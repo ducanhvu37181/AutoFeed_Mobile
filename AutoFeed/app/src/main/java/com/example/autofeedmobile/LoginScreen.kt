@@ -21,7 +21,7 @@ import com.example.autofeedmobile.network.RetrofitClient
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit = {}) {
+fun LoginScreen(onLoginSuccess: (Int) -> Unit = {}) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -160,9 +160,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit = {}) {
                             scope.launch {
                                 try {
                                     val response = RetrofitClient.instance.login(email, password)
-                                    if (response.isSuccessful && response.body() != null) {
-                                        // You can store response.body()?.token here if needed
-                                        onLoginSuccess()
+                                    if (response.isSuccessful && response.body()?.user != null) {
+                                        onLoginSuccess(response.body()!!.user!!.userId)
                                     } else {
                                         errorMessage = "Login failed: Invalid credentials"
                                     }
@@ -207,10 +206,4 @@ fun LoginScreen(onLoginSuccess: () -> Unit = {}) {
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-    LoginScreen()
 }

@@ -21,7 +21,8 @@ data class ScheduleTask(
     val status: String, // "Completed", "Pending", "In Progress"
     val time: String,
     val location: String,
-    val details: String
+    val details: String,
+    val note: String? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +37,7 @@ fun ScheduleDetailContent(
             .background(Color.White)
             .padding(16.dp)
     ) {
-        // Drag Handle (represented in the image as a small line)
+        // Drag Handle
         Box(
             modifier = Modifier
                 .width(40.dp)
@@ -129,6 +130,24 @@ fun ScheduleDetailContent(
             )
         }
 
+        // Note Section
+        if (!task.note.isNullOrEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Note",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A1A1A)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = task.note,
+                fontSize = 14.sp,
+                color = Color.Gray,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
 
         // Action Button
@@ -201,7 +220,8 @@ fun ScheduleDetailPreview() {
             status = "Completed",
             time = "06:00 AM",
             location = "Barn A",
-            details = "Complete the scheduled feeding task for the assigned location. Ensure all procedures are followed and report any issues."
+            details = "Complete the scheduled feeding task for the assigned location. Ensure all procedures are followed and report any issues.",
+            note = "All tech farmer-specific functions have been properly relocated and are now only accessible to users with the Tech Farmer role."
         )
     )
 }
@@ -215,7 +235,8 @@ fun ScheduleDetailPendingPreview() {
             status = "Pending",
             time = "12:00 PM",
             location = "Barn A",
-            details = "Complete the scheduled feeding task for the assigned location. Ensure all procedures are followed and report any issues."
+            details = "Complete the scheduled feeding task for the assigned location. Ensure all procedures are followed and report any issues.",
+            note = "Relocate Device Management Functions Version 31"
         )
     )
 }
