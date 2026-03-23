@@ -17,11 +17,17 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autofeedmobile.network.RetrofitClient
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit = {}) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -51,7 +57,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit = {}) {
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.Notifications, // Temporary bird-like icon placeholder
+                            imageVector = Icons.Default.Notifications,
                             contentDescription = "Logo",
                             tint = Color.White,
                             modifier = Modifier.size(32.dp)
@@ -77,6 +83,15 @@ fun LoginScreen(onLoginSuccess: () -> Unit = {}) {
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage!!,
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+
                 // Email Field
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
@@ -96,6 +111,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit = {}) {
                         },
                         shape = RoundedCornerShape(8.dp),
                         singleLine = true,
+                        enabled = !isLoading,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF00A67E),
                             unfocusedBorderColor = Color(0xFFE0E0E0)
@@ -125,6 +141,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit = {}) {
                         visualTransformation = PasswordVisualTransformation(),
                         shape = RoundedCornerShape(8.dp),
                         singleLine = true,
+                        enabled = !isLoading,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF00A67E),
                             unfocusedBorderColor = Color(0xFFE0E0E0)
@@ -136,24 +153,51 @@ fun LoginScreen(onLoginSuccess: () -> Unit = {}) {
 
                 // Sign In Button
                 Button(
-                    onClick = onLoginSuccess,
+                    onClick = {
+                        if (email.isNotEmpty() && password.isNotEmpty()) {
+                            isLoading = true
+                            errorMessage = null
+                            scope.launch {
+                                try {
+                                    val response = RetrofitClient.instance.login(email, password)
+                                    if (response.isSuccessful && response.body() != null) {
+                                        // You can store response.body()?.token here if needed
+                                        onLoginSuccess()
+                                    } else {
+                                        errorMessage = "Login failed: Invalid credentials"
+                                    }
+                                } catch (e: Exception) {
+                                    errorMessage = "Network error: ${e.localizedMessage}"
+                                } finally {
+                                    isLoading = false
+                                }
+                            }
+                        } else {
+                            errorMessage = "Please enter email and password"
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(8.dp),
+                    enabled = !isLoading,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00A67E))
                 ) {
-                    Text(
-                        text = "Sign In",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(
+                            text = "Sign In",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TextButton(onClick = { /* TODO */ }) {
+                TextButton(onClick = { /* TODO */ }, enabled = !isLoading) {
                     Text(
                         text = "Forgot password?",
                         color = Color(0xFF00A67E),
