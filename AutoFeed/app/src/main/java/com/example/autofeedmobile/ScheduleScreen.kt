@@ -19,10 +19,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.network.ScheduleData
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleScreen(
+    userId: Int,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {}
 ) {
@@ -30,10 +36,67 @@ fun ScheduleScreen(
     val filters = listOf("All", "Pending", "In Progress", "Completed")
     var showMenu by remember { mutableStateOf(false) }
     
-    // State for bottom sheet / detail view
-    var selectedTask by remember { mutableStateOf<ScheduleTask?>(null) }
+    val scope = rememberCoroutineScope()
+    var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Detail state
+    var selectedTaskDetail by remember { mutableStateOf<ScheduleTask?>(null) }
+    var selectedTaskId by remember { mutableIntStateOf(-1) }
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
+    var isDetailLoading by remember { mutableStateOf(false) }
+
+    // Today's Date
+    val todayDate = remember {
+        val sdf = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
+        sdf.format(Date())
+    }
+
+    // Function to fetch schedules
+    fun fetchSchedules() {
+        isLoading = true
+        scope.launch {
+            try {
+                val response = RetrofitClient.instance.getSchedules(userId)
+                if (response.isSuccessful) {
+                    schedules = response.body()?.data ?: emptyList()
+                } else {
+                    errorMessage = "Failed to load schedules"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Network error: ${e.localizedMessage}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    // Function to update status
+    fun updateStatus(id: Int) {
+        scope.launch {
+            try {
+                val response = RetrofitClient.instance.updateScheduleStatus(id, "Completed")
+                if (response.isSuccessful) {
+                    fetchSchedules() // Refresh list
+                }
+            } catch (e: Exception) {
+                // handle error
+            }
+        }
+    }
+
+    // Fetch schedules on start
+    LaunchedEffect(userId) {
+        fetchSchedules()
+    }
+
+    val filteredSchedules = if (selectedFilter == "All") {
+        schedules
+    } else {
+        schedules.filter { it.status.equals(selectedFilter, ignoreCase = true) }
+    }
 
     Scaffold(
         topBar = {
@@ -141,7 +204,7 @@ fun ScheduleScreen(
                 ) {
                     Column {
                         Text("Today's Schedule", fontSize = 14.sp, color = Color.Gray)
-                        Text("Friday, February 6, 2026", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(todayDate, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
                     IconButton(onClick = { }) {
                         Icon(Icons.Default.CalendarMonth, contentDescription = "Select Date")
@@ -151,16 +214,20 @@ fun ScheduleScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Progress Bar
+                val completedCount = schedules.count { it.status.equals("Completed", ignoreCase = true) }
+                val totalCount = schedules.size
+                val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("Progress Today", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text("2/6", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text("$completedCount/$totalCount", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
-                    progress = { 2f / 6f },
+                    progress = { progress },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp),
@@ -192,91 +259,105 @@ fun ScheduleScreen(
             }
 
             // Schedule List
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                item {
-                    ScheduleItem(
-                        title = "Morning Feeding - Barn A",
-                        time = "06:00 AM",
-                        location = "Barn A",
-                        statusColor = Color(0xFF00C853),
-                        isCompleted = true,
-                        onClick = {
-                            selectedTask = ScheduleTask(
-                                "Morning Feeding - Barn A",
-                                "Completed",
-                                "06:00 AM",
-                                "Barn A",
-                                "Complete the scheduled feeding task for the assigned location. Ensure all procedures are followed and report any issues."
-                            )
-                            showBottomSheet = true
-                        }
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF00897B))
+                } else if (filteredSchedules.isEmpty()) {
+                    Text(
+                        "No schedule",
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Color.Gray,
+                        fontSize = 16.sp
                     )
-                }
-                item {
-                    ScheduleItem(
-                        title = "Health Check - All Cages",
-                        time = "09:00 AM",
-                        location = "All Barns",
-                        statusColor = Color(0xFF00C853),
-                        isCompleted = true,
-                        onClick = {
-                            selectedTask = ScheduleTask(
-                                "Health Check - All Cages",
-                                "Completed",
-                                "09:00 AM",
-                                "All Barns",
-                                "Perform a routine health check on all chickens. Look for signs of disease or unusual behavior."
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(filteredSchedules) { data ->
+                            ScheduleItem(
+                                title = data.taskTitle,
+                                time = "${formatTime(data.startDate)} - ${formatTime(data.endDate)}",
+                                location = "Barn ${data.barnId}",
+                                statusColor = if (data.status.equals("Completed", ignoreCase = true)) Color(0xFF00C853) else Color(0xFF2196F3),
+                                isCompleted = data.status.equals("Completed", ignoreCase = true),
+                                showAction = !data.status.equals("Completed", ignoreCase = true),
+                                onClick = {
+                                    selectedTaskId = data.schedId
+                                    isDetailLoading = true
+                                    showBottomSheet = true
+                                    scope.launch {
+                                        try {
+                                            val response = RetrofitClient.instance.getScheduleDetail(data.schedId)
+                                            if (response.isSuccessful && response.body()?.data != null) {
+                                                val detail = response.body()!!.data!!
+                                                selectedTaskDetail = ScheduleTask(
+                                                    title = detail.taskTitle,
+                                                    status = detail.status.replaceFirstChar { it.uppercase() },
+                                                    time = "${formatTime(detail.startDate)} - ${formatTime(detail.endDate)}",
+                                                    location = "Barn ${detail.barnId}",
+                                                    details = detail.description,
+                                                    note = detail.note
+                                                )
+                                            }
+                                        } catch (e: Exception) {
+                                            // handle error
+                                        } finally {
+                                            isDetailLoading = false
+                                        }
+                                    }
+                                },
+                                onMarkComplete = {
+                                    updateStatus(data.schedId)
+                                }
                             )
-                            showBottomSheet = true
                         }
-                    )
-                }
-                item {
-                    ScheduleItem(
-                        title = "Noon Feeding - Barn A",
-                        time = "12:00 PM",
-                        location = "Barn A",
-                        statusColor = Color(0xFF2196F3),
-                        isCompleted = false,
-                        showAction = true,
-                        onClick = {
-                            selectedTask = ScheduleTask(
-                                "Noon Feeding - Barn A",
-                                "Pending",
-                                "12:00 PM",
-                                "Barn A",
-                                "Complete the scheduled feeding task for the assigned location. Ensure all procedures are followed and report any issues."
-                            )
-                            showBottomSheet = true
-                        }
-                    )
+                    }
                 }
             }
         }
 
         // Bottom Sheet for Detail View
-        if (showBottomSheet && selectedTask != null) {
+        if (showBottomSheet) {
             ModalBottomSheet(
-                onDismissRequest = { showBottomSheet = false },
+                onDismissRequest = { 
+                    showBottomSheet = false 
+                    selectedTaskDetail = null
+                    selectedTaskId = -1
+                },
                 sheetState = sheetState,
                 containerColor = Color.White,
-                dragHandle = null // We'll use our custom drag handle inside the content
+                dragHandle = null
             ) {
-                ScheduleDetailContent(
-                    task = selectedTask!!,
-                    onMarkComplete = {
-                        showBottomSheet = false
-                        // Logic to mark task as complete would go here
+                Box(modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp)) {
+                    if (isDetailLoading) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF00A67E))
+                    } else if (selectedTaskDetail != null) {
+                        ScheduleDetailContent(
+                            task = selectedTaskDetail!!,
+                            onMarkComplete = {
+                                showBottomSheet = false
+                                if (selectedTaskId != -1) {
+                                    updateStatus(selectedTaskId)
+                                }
+                            }
+                        )
                     }
-                )
+                }
             }
         }
+    }
+}
+
+fun formatTime(isoString: String): String {
+    return try {
+        // Simple extraction of HH:mm from "YYYY-MM-DDTHH:mm:ss"
+        isoString.split("T")[1].substring(0, 5)
+    } catch (e: Exception) {
+        isoString
     }
 }
 
@@ -288,7 +369,8 @@ fun ScheduleItem(
     statusColor: Color,
     isCompleted: Boolean,
     showAction: Boolean = false,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onMarkComplete: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -356,7 +438,7 @@ fun ScheduleItem(
                 if (showAction) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { /* Internal click handled by card but button can have its own */ },
+                        onClick = { onMarkComplete() },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B)),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
@@ -375,10 +457,4 @@ fun ScheduleItem(
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ScheduleScreenPreview() {
-    ScheduleScreen()
 }

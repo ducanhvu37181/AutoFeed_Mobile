@@ -12,3 +12,33 @@ data class LoginResponse(
     val token: String?,
     val user: UserResponse?
 )
+
+data class ScheduleData(
+    val schedId: Int,
+    val userId: Int,
+    val taskId: Int,
+    val cbarnId: Int,
+    val description: String,
+    val note: String?,
+    val priority: String,
+    val status: String,
+    val startDate: String,
+    val endDate: String,
+    val barnId: Int,
+    val taskTitle: String,
+    val username: String
+)
+
+data class ScheduleListResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: List<ScheduleData>,
+    val description: String
+)
+
+data class ScheduleDetailResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: ScheduleData,
+    val description: String
+)

@@ -3,6 +3,7 @@ package com.example.autofeedmobile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,14 +20,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.network.ScheduleData
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
+    userId: Int,
     onLogout: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(userId) {
+        try {
+            val response = RetrofitClient.instance.getSchedules(userId)
+            if (response.isSuccessful) {
+                schedules = response.body()?.data ?: emptyList()
+            }
+        } catch (e: Exception) {
+            // handle error
+        } finally {
+            isLoading = false
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -42,7 +63,6 @@ fun DashboardScreen(
                         IconButton(onClick = { }) {
                             Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                         }
-                        // Red dot for notification
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
@@ -135,6 +155,7 @@ fun DashboardScreen(
         ) {
             // Summary Cards Grid
             item {
+                val completedCount = schedules.count { it.status.equals("Completed", ignoreCase = true) }
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         SummaryCard(
@@ -160,7 +181,7 @@ fun DashboardScreen(
                             icon = Icons.Default.ElectricBolt,
                             iconContainerColor = Color(0xFF9C27B0).copy(alpha = 0.1f),
                             iconColor = Color(0xFF9C27B0),
-                            value = "5",
+                            value = "${schedules.size}",
                             label = "Today Schedules"
                         )
                         SummaryCard(
@@ -191,7 +212,7 @@ fun DashboardScreen(
                         title = "Temperature",
                         message = "Cage B-02 temperature above normal",
                         color = Color(0xFFFFF8E1),
-                        indicatorColor = Color(0xFFFFA000) // Orange
+                        indicatorColor = Color(0xFFFFA000)
                     )
                 }
             }
@@ -214,30 +235,27 @@ fun DashboardScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White)
                     ) {
-                        Column {
-                            DashboardTaskItem(
-                                title = "Morning Feeding - Barn A",
-                                time = "06:00 AM",
-                                isCompleted = true
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            DashboardTaskItem(
-                                title = "Health Check - Cage A-03",
-                                time = "09:00 AM",
-                                isCompleted = false
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            DashboardTaskItem(
-                                title = "Noon Feeding - Barn A",
-                                time = "12:00 PM",
-                                isCompleted = false
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            DashboardTaskItem(
-                                title = "Clean Water Dispensers",
-                                time = "02:00 PM",
-                                isCompleted = false
-                            )
+                        if (isLoading) {
+                            Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = Color(0xFF00897B))
+                            }
+                        } else if (schedules.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                                Text("No schedules today", color = Color.Gray)
+                            }
+                        } else {
+                            Column {
+                                schedules.take(4).forEachIndexed { index, schedule ->
+                                    DashboardTaskItem(
+                                        title = schedule.taskTitle,
+                                        time = formatTime(schedule.startDate),
+                                        isCompleted = schedule.status.equals("Completed", ignoreCase = true)
+                                    )
+                                    if (index < schedules.take(4).size - 1) {
+                                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -245,6 +263,11 @@ fun DashboardScreen(
 
             // Today Schedule Completed Section
             item {
+                val completedCount = schedules.count { it.status.equals("Completed", ignoreCase = true) }
+                val totalCount = schedules.size
+                val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
+                val percentage = if (totalCount > 0) (completedCount.toFloat() / totalCount * 100).toInt() else 0
+
                 Column {
                     Text("Today Schedule Completed", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -261,16 +284,16 @@ fun DashboardScreen(
                             ) {
                                 Column {
                                     Text("Schedules Completed", fontSize = 12.sp, color = Color.Gray)
-                                    Text("2/6", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                    Text("$completedCount/$totalCount", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = Color(0xFF00C853), modifier = Modifier.size(16.dp))
-                                    Text("33.3%", color = Color(0xFF00C853), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text("$percentage%", color = Color(0xFF00C853), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                 }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             LinearProgressIndicator(
-                                progress = { 2f / 6f },
+                                progress = { progress },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp),
@@ -394,10 +417,4 @@ fun DashboardTaskItem(
         }
         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DashboardScreenPreview() {
-    DashboardScreen()
 }
