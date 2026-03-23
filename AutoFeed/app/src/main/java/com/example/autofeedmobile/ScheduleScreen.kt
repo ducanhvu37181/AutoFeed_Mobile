@@ -29,6 +29,11 @@ fun ScheduleScreen(
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Pending", "In Progress", "Completed")
     var showMenu by remember { mutableStateOf(false) }
+    
+    // State for bottom sheet / detail view
+    var selectedTask by remember { mutableStateOf<ScheduleTask?>(null) }
+    val sheetState = rememberModalBottomSheetState()
+    var showBottomSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -165,7 +170,7 @@ fun ScheduleScreen(
                 )
             }
 
-            // Filter Chips - UPDATED LABELS
+            // Filter Chips
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -200,7 +205,17 @@ fun ScheduleScreen(
                         time = "06:00 AM",
                         location = "Barn A",
                         statusColor = Color(0xFF00C853),
-                        isCompleted = true
+                        isCompleted = true,
+                        onClick = {
+                            selectedTask = ScheduleTask(
+                                "Morning Feeding - Barn A",
+                                "Completed",
+                                "06:00 AM",
+                                "Barn A",
+                                "Complete the scheduled feeding task for the assigned location. Ensure all procedures are followed and report any issues."
+                            )
+                            showBottomSheet = true
+                        }
                     )
                 }
                 item {
@@ -209,7 +224,17 @@ fun ScheduleScreen(
                         time = "09:00 AM",
                         location = "All Barns",
                         statusColor = Color(0xFF00C853),
-                        isCompleted = true
+                        isCompleted = true,
+                        onClick = {
+                            selectedTask = ScheduleTask(
+                                "Health Check - All Cages",
+                                "Completed",
+                                "09:00 AM",
+                                "All Barns",
+                                "Perform a routine health check on all chickens. Look for signs of disease or unusual behavior."
+                            )
+                            showBottomSheet = true
+                        }
                     )
                 }
                 item {
@@ -219,9 +244,37 @@ fun ScheduleScreen(
                         location = "Barn A",
                         statusColor = Color(0xFF2196F3),
                         isCompleted = false,
-                        showAction = true
+                        showAction = true,
+                        onClick = {
+                            selectedTask = ScheduleTask(
+                                "Noon Feeding - Barn A",
+                                "Pending",
+                                "12:00 PM",
+                                "Barn A",
+                                "Complete the scheduled feeding task for the assigned location. Ensure all procedures are followed and report any issues."
+                            )
+                            showBottomSheet = true
+                        }
                     )
                 }
+            }
+        }
+
+        // Bottom Sheet for Detail View
+        if (showBottomSheet && selectedTask != null) {
+            ModalBottomSheet(
+                onDismissRequest = { showBottomSheet = false },
+                sheetState = sheetState,
+                containerColor = Color.White,
+                dragHandle = null // We'll use our custom drag handle inside the content
+            ) {
+                ScheduleDetailContent(
+                    task = selectedTask!!,
+                    onMarkComplete = {
+                        showBottomSheet = false
+                        // Logic to mark task as complete would go here
+                    }
+                )
             }
         }
     }
@@ -234,13 +287,15 @@ fun ScheduleItem(
     location: String,
     statusColor: Color,
     isCompleted: Boolean,
-    showAction: Boolean = false
+    showAction: Boolean = false,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier
@@ -301,7 +356,7 @@ fun ScheduleItem(
                 if (showAction) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { },
+                        onClick = { /* Internal click handled by card but button can have its own */ },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B)),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
@@ -313,7 +368,7 @@ fun ScheduleItem(
             }
             
             IconButton(
-                onClick = { },
+                onClick = onClick,
                 modifier = Modifier.align(Alignment.CenterVertically)
             ) {
                 Icon(Icons.Default.ChevronRight, contentDescription = "Details", tint = Color.Gray)
