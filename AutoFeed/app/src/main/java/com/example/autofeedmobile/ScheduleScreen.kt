@@ -43,6 +43,10 @@ fun ScheduleScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Date state
+    var selectedDate by remember { mutableStateOf(Calendar.getInstance()) }
+    var showDatePicker by remember { mutableStateOf(false) }
+
     // Detail state
     var selectedTaskDetail by remember { mutableStateOf<ScheduleTask?>(null) }
     var selectedTaskId by remember { mutableIntStateOf(-1) }
@@ -50,20 +54,20 @@ fun ScheduleScreen(
     var showBottomSheet by remember { mutableStateOf(false) }
     var isDetailLoading by remember { mutableStateOf(false) }
 
-    // Today's Date
-    val todayDate = remember {
-        val sdf = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
-        sdf.format(Date())
-    }
+    // Formatters
+    val displayDateFormatter = remember { SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()) }
+    val apiDateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
     // Function to fetch schedules
     fun fetchSchedules() {
         isLoading = true
         scope.launch {
             try {
-                val response = RetrofitClient.instance.getSchedules(userId)
+                val dateString = apiDateFormatter.format(selectedDate.time)
+                val response = RetrofitClient.instance.getSchedulesByDate(userId, dateString)
                 if (response.isSuccessful) {
                     schedules = response.body()?.data ?: emptyList()
+                    errorMessage = null
                 } else {
                     errorMessage = "Failed to load schedules"
                 }
@@ -76,10 +80,10 @@ fun ScheduleScreen(
     }
 
     // Function to update status
-    fun updateStatus(id: Int) {
+    fun updateStatus(id: Int, newStatus: String) {
         scope.launch {
             try {
-                val response = RetrofitClient.instance.updateScheduleStatus(id, "Completed")
+                val response = RetrofitClient.instance.updateScheduleStatus(id, newStatus)
                 if (response.isSuccessful) {
                     fetchSchedules() // Refresh list
                 }
@@ -89,8 +93,8 @@ fun ScheduleScreen(
         }
     }
 
-    // Fetch schedules on start
-    LaunchedEffect(userId) {
+    // Fetch schedules when user or date changes
+    LaunchedEffect(userId, selectedDate) {
         fetchSchedules()
     }
 
@@ -205,10 +209,11 @@ fun ScheduleScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Today's Schedule", fontSize = 14.sp, color = Color.Gray)
-                        Text(todayDate, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        val isToday = apiDateFormatter.format(selectedDate.time) == apiDateFormatter.format(Date())
+                        Text(if (isToday) "Today's Schedule" else "Schedule for", fontSize = 14.sp, color = Color.Gray)
+                        Text(displayDateFormatter.format(selectedDate.time), fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
-                    IconButton(onClick = { }) {
+                    IconButton(onClick = { showDatePicker = true }) {
                         Icon(Icons.Default.CalendarMonth, contentDescription = "Select Date")
                     }
                 }
@@ -224,7 +229,7 @@ fun ScheduleScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Progress Today", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text("Progress", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     Text("$completedCount/$totalCount", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -264,9 +269,16 @@ fun ScheduleScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF00897B))
+                } else if (errorMessage != null) {
+                   Column(modifier = Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                       Text(errorMessage!!, color = Color.Red)
+                       Button(onClick = { fetchSchedules() }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B))) {
+                           Text("Retry")
+                       }
+                   }
                 } else if (filteredSchedules.isEmpty()) {
                     Text(
-                        "No schedule",
+                        "No schedules for this day",
                         modifier = Modifier.align(Alignment.Center),
                         color = Color.Gray,
                         fontSize = 16.sp
@@ -284,9 +296,15 @@ fun ScheduleScreen(
                                 title = data.taskTitle,
                                 time = "${formatTimeOnly(data.startTime)} - ${formatTimeOnly(data.endTime)}",
                                 location = "Barn ${data.barnId}",
-                                statusColor = if (data.status.equals("Completed", ignoreCase = true)) Color(0xFF00C853) else Color(0xFF2196F3),
+                                priority = data.priority,
+                                statusColor = when {
+                                    data.status.equals("Completed", ignoreCase = true) -> Color(0xFF00C853)
+                                    data.status.equals("In Progress", ignoreCase = true) -> Color(0xFFFF9800)
+                                    else -> Color(0xFF2196F3)
+                                },
                                 isCompleted = data.status.equals("Completed", ignoreCase = true),
                                 showAction = !data.status.equals("Completed", ignoreCase = true),
+                                actionText = if (data.status.equals("Pending", ignoreCase = true)) "Begin Schedule" else "Mark Complete",
                                 onClick = {
                                     selectedTaskId = data.schedId
                                     isDetailLoading = true
@@ -299,6 +317,7 @@ fun ScheduleScreen(
                                                 selectedTaskDetail = ScheduleTask(
                                                     title = detail.taskTitle,
                                                     status = detail.status.replaceFirstChar { it.uppercase() },
+                                                    priority = detail.priority.replaceFirstChar { it.uppercase() },
                                                     time = "${formatTimeOnly(detail.startTime)} - ${formatTimeOnly(detail.endTime)}",
                                                     location = "Barn ${detail.barnId}",
                                                     details = detail.description,
@@ -312,13 +331,44 @@ fun ScheduleScreen(
                                         }
                                     }
                                 },
-                                onMarkComplete = {
-                                    updateStatus(data.schedId)
+                                onActionClick = {
+                                    val nextStatus = if (data.status.equals("Pending", ignoreCase = true)) "In Progress" else "Completed"
+                                    updateStatus(data.schedId, nextStatus)
                                 }
                             )
                         }
                     }
                 }
+            }
+        }
+
+        // Date Picker Dialog
+        if (showDatePicker) {
+            val datePickerState = rememberDatePickerState(
+                initialSelectedDateMillis = selectedDate.timeInMillis
+            )
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            val newDate = Calendar.getInstance().apply {
+                                timeInMillis = it
+                            }
+                            selectedDate = newDate
+                        }
+                        showDatePicker = false
+                    }) {
+                        Text("OK", color = Color(0xFF00897B))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) {
+                        Text("Cancel", color = Color.Gray)
+                    }
+                }
+            ) {
+                DatePicker(state = datePickerState)
             }
         }
 
@@ -340,10 +390,10 @@ fun ScheduleScreen(
                     } else if (selectedTaskDetail != null) {
                         ScheduleDetailContent(
                             task = selectedTaskDetail!!,
-                            onMarkComplete = {
+                            onStatusUpdate = { newStatus ->
                                 showBottomSheet = false
                                 if (selectedTaskId != -1) {
-                                    updateStatus(selectedTaskId)
+                                    updateStatus(selectedTaskId, newStatus)
                                 }
                             }
                         )
@@ -359,11 +409,13 @@ fun ScheduleItem(
     title: String,
     time: String,
     location: String,
+    priority: String,
     statusColor: Color,
     isCompleted: Boolean,
     showAction: Boolean = false,
+    actionText: String = "Mark Complete",
     onClick: () -> Unit = {},
-    onMarkComplete: () -> Unit = {}
+    onActionClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -416,6 +468,33 @@ fun ScheduleItem(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    val priorityColor = when (priority.lowercase()) {
+                        "high" -> Color(0xFFFFEBEE)
+                        "medium" -> Color(0xFFFFF3E0)
+                        "low" -> Color(0xFFE8F5E9)
+                        else -> Color(0xFFF5F5F5)
+                    }
+                    val priorityTextColor = when (priority.lowercase()) {
+                        "high" -> Color(0xFFD32F2F)
+                        "medium" -> Color(0xFFEF6C00)
+                        "low" -> Color(0xFF2E7D32)
+                        else -> Color(0xFF616161)
+                    }
+                    
+                    Surface(
+                        color = priorityColor,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = priority,
+                            color = priorityTextColor,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -431,13 +510,13 @@ fun ScheduleItem(
                 if (showAction) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { onMarkComplete() },
+                        onClick = { onActionClick() },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B)),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                         modifier = Modifier.height(36.dp)
                     ) {
-                        Text("Mark Complete", color = Color.White)
+                        Text(actionText, color = Color.White)
                     }
                 }
             }

@@ -18,6 +18,12 @@ interface ApiService {
     @GET("api/Schedule/user/{userId}")
     suspend fun getSchedules(@Path("userId") userId: Int): Response<ScheduleListResponse>
 
+    @GET("api/Schedule/user/{userId}/date")
+    suspend fun getSchedulesByDate(
+        @Path("userId") userId: Int,
+        @Query("date") date: String
+    ): Response<ScheduleListResponse>
+
     @GET("api/Schedule/{id}")
     suspend fun getScheduleDetail(@Path("id") id: Int): Response<ScheduleDetailResponse>
 
