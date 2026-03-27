@@ -30,7 +30,9 @@ import java.util.*
 fun ScheduleScreen(
     userId: Int,
     onLogout: () -> Unit = {},
-    onNavigateToDashboard: () -> Unit = {}
+    onNavigateToDashboard: () -> Unit = {},
+    onNavigateToInventory: () -> Unit = {},
+    onNavigateToRequests: () -> Unit = {}
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Pending", "In Progress", "Completed")
@@ -168,7 +170,7 @@ fun ScheduleScreen(
                     icon = { Icon(Icons.Default.Inventory2, contentDescription = "Inventory") },
                     label = { Text("Inventory") },
                     selected = false,
-                    onClick = {}
+                    onClick = onNavigateToInventory
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
@@ -180,7 +182,7 @@ fun ScheduleScreen(
                     icon = { Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Requests") },
                     label = { Text("Requests") },
                     selected = false,
-                    onClick = {}
+                    onClick = onNavigateToRequests
                 )
             }
         }
@@ -280,7 +282,7 @@ fun ScheduleScreen(
                         items(filteredSchedules) { data ->
                             ScheduleItem(
                                 title = data.taskTitle,
-                                time = "${formatTime(data.startDate)} - ${formatTime(data.endDate)}",
+                                time = "${formatTimeOnly(data.startTime)} - ${formatTimeOnly(data.endTime)}",
                                 location = "Barn ${data.barnId}",
                                 statusColor = if (data.status.equals("Completed", ignoreCase = true)) Color(0xFF00C853) else Color(0xFF2196F3),
                                 isCompleted = data.status.equals("Completed", ignoreCase = true),
@@ -297,7 +299,7 @@ fun ScheduleScreen(
                                                 selectedTaskDetail = ScheduleTask(
                                                     title = detail.taskTitle,
                                                     status = detail.status.replaceFirstChar { it.uppercase() },
-                                                    time = "${formatTime(detail.startDate)} - ${formatTime(detail.endDate)}",
+                                                    time = "${formatTimeOnly(detail.startTime)} - ${formatTimeOnly(detail.endTime)}",
                                                     location = "Barn ${detail.barnId}",
                                                     details = detail.description,
                                                     note = detail.note
@@ -349,15 +351,6 @@ fun ScheduleScreen(
                 }
             }
         }
-    }
-}
-
-fun formatTime(isoString: String): String {
-    return try {
-        // Simple extraction of HH:mm from "YYYY-MM-DDTHH:mm:ss"
-        isoString.split("T")[1].substring(0, 5)
-    } catch (e: Exception) {
-        isoString
     }
 }
 

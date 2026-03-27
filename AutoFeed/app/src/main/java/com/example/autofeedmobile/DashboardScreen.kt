@@ -1,6 +1,7 @@
 package com.example.autofeedmobile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,24 +30,53 @@ import kotlinx.coroutines.launch
 fun DashboardScreen(
     userId: Int,
     onLogout: () -> Unit = {},
-    onNavigateToSchedule: () -> Unit = {}
+    onNavigateToSchedule: () -> Unit = {},
+    onNavigateToInventory: () -> Unit = {},
+    onNavigateToRequests: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(userId) {
-        try {
-            val response = RetrofitClient.instance.getSchedules(userId)
-            if (response.isSuccessful) {
-                schedules = response.body()?.data ?: emptyList()
+    // Detail state
+    var selectedTaskDetail by remember { mutableStateOf<ScheduleTask?>(null) }
+    var selectedTaskId by remember { mutableIntStateOf(-1) }
+    val sheetState = rememberModalBottomSheetState()
+    var showBottomSheet by remember { mutableStateOf(false) }
+    var isDetailLoading by remember { mutableStateOf(false) }
+
+    fun fetchSchedules() {
+        isLoading = true
+        scope.launch {
+            try {
+                val response = RetrofitClient.instance.getSchedules(userId)
+                if (response.isSuccessful) {
+                    schedules = response.body()?.data ?: emptyList()
+                }
+            } catch (e: Exception) {
+                // handle error
+            } finally {
+                isLoading = false
             }
-        } catch (e: Exception) {
-            // handle error
-        } finally {
-            isLoading = false
         }
+    }
+
+    fun updateStatus(id: Int) {
+        scope.launch {
+            try {
+                val response = RetrofitClient.instance.updateScheduleStatus(id, "Completed")
+                if (response.isSuccessful) {
+                    fetchSchedules() // Refresh dashboard
+                }
+            } catch (e: Exception) {
+                // handle error
+            }
+        }
+    }
+
+    LaunchedEffect(userId) {
+        fetchSchedules()
     }
 
     Scaffold(
@@ -128,7 +158,7 @@ fun DashboardScreen(
                     icon = { Icon(Icons.Default.Inventory2, contentDescription = "Inventory") },
                     label = { Text("Inventory") },
                     selected = false,
-                    onClick = {}
+                    onClick = onNavigateToInventory
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
@@ -140,168 +170,222 @@ fun DashboardScreen(
                     icon = { Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Requests") },
                     label = { Text("Requests") },
                     selected = false,
-                    onClick = {}
+                    onClick = onNavigateToRequests
                 )
             }
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(Color(0xFFF5F5F5)),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Summary Cards Grid
-            item {
-                val completedCount = schedules.count { it.status.equals("Completed", ignoreCase = true) }
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SummaryCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Default.Pets,
-                            iconContainerColor = Color(0xFF1DB954).copy(alpha = 0.1f),
-                            iconColor = Color(0xFF1DB954),
-                            value = "32",
-                            label = "My Chickens"
-                        )
-                        SummaryCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Default.Inventory2,
-                            iconContainerColor = Color(0xFF2196F3).copy(alpha = 0.1f),
-                            iconColor = Color(0xFF2196F3),
-                            value = "8",
-                            label = "Inventory Items"
-                        )
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SummaryCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Default.ElectricBolt,
-                            iconContainerColor = Color(0xFF9C27B0).copy(alpha = 0.1f),
-                            iconColor = Color(0xFF9C27B0),
-                            value = "${schedules.size}",
-                            label = "Today Schedules"
-                        )
-                        SummaryCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Default.Warning,
-                            iconContainerColor = Color(0xFFFF5722).copy(alpha = 0.1f),
-                            iconColor = Color(0xFFFF5722),
-                            value = "2",
-                            label = "Low Stock"
-                        )
-                    }
-                }
-            }
-
-            // Alerts Section
-            item {
-                Column {
-                    Text("Alerts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    AlertItem(
-                        title = "Low Stock",
-                        message = "Premium Chicken Feed below minimum",
-                        color = Color(0xFFFFEBEE),
-                        indicatorColor = Color.Red
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    AlertItem(
-                        title = "Temperature",
-                        message = "Cage B-02 temperature above normal",
-                        color = Color(0xFFFFF8E1),
-                        indicatorColor = Color(0xFFFFA000)
-                    )
-                }
-            }
-
-            // Today's Schedules Section
-            item {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Today's Schedules", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        TextButton(onClick = onNavigateToSchedule) {
-                            Text("View All", color = Color(0xFF00897B))
+        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(Color(0xFFF5F5F5)),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Summary Cards Grid
+                item {
+                    val completedCount = schedules.count { it.status.equals("Completed", ignoreCase = true) }
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            SummaryCard(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Default.Pets,
+                                iconContainerColor = Color(0xFF1DB954).copy(alpha = 0.1f),
+                                iconColor = Color(0xFF1DB954),
+                                value = "32",
+                                label = "My Chickens"
+                            )
+                            SummaryCard(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Default.Inventory2,
+                                iconContainerColor = Color(0xFF2196F3).copy(alpha = 0.1f),
+                                iconColor = Color(0xFF2196F3),
+                                value = "8",
+                                label = "Inventory Items"
+                            )
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            SummaryCard(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Default.ElectricBolt,
+                                iconContainerColor = Color(0xFF9C27B0).copy(alpha = 0.1f),
+                                iconColor = Color(0xFF9C27B0),
+                                value = "${schedules.size}",
+                                label = "Today Schedules"
+                            )
+                            SummaryCard(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Default.Warning,
+                                iconContainerColor = Color(0xFFFF5722).copy(alpha = 0.1f),
+                                iconColor = Color(0xFFFF5722),
+                                value = "2",
+                                label = "Low Stock"
+                            )
                         }
                     }
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                    ) {
-                        if (isLoading) {
-                            Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = Color(0xFF00897B))
+                }
+
+                // Alerts Section
+                item {
+                    Column {
+                        Text("Alerts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        AlertItem(
+                            title = "Low Stock",
+                            message = "Premium Chicken Feed below minimum",
+                            color = Color(0xFFFFEBEE),
+                            indicatorColor = Color.Red
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        AlertItem(
+                            title = "Temperature",
+                            message = "Cage B-02 temperature above normal",
+                            color = Color(0xFFFFF8E1),
+                            indicatorColor = Color(0xFFFFA000)
+                        )
+                    }
+                }
+
+                // Today's Schedules Section
+                item {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Today's Schedules", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            TextButton(onClick = onNavigateToSchedule) {
+                                Text("View All", color = Color(0xFF00897B))
                             }
-                        } else if (schedules.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                                Text("No schedules today", color = Color.Gray)
-                            }
-                        } else {
-                            Column {
-                                schedules.take(4).forEachIndexed { index, schedule ->
-                                    DashboardTaskItem(
-                                        title = schedule.taskTitle,
-                                        time = formatTime(schedule.startDate),
-                                        isCompleted = schedule.status.equals("Completed", ignoreCase = true)
-                                    )
-                                    if (index < schedules.take(4).size - 1) {
-                                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            if (isLoading) {
+                                Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = Color(0xFF00897B))
+                                }
+                            } else if (schedules.isEmpty()) {
+                                Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                                    Text("No schedules today", color = Color.Gray)
+                                }
+                            } else {
+                                Column {
+                                    schedules.take(4).forEachIndexed { index, schedule ->
+                                        DashboardTaskItem(
+                                            title = schedule.taskTitle,
+                                            time = formatTimeOnly(schedule.startTime),
+                                            isCompleted = schedule.status.equals("Completed", ignoreCase = true),
+                                            onClick = {
+                                                selectedTaskId = schedule.schedId
+                                                isDetailLoading = true
+                                                showBottomSheet = true
+                                                scope.launch {
+                                                    try {
+                                                        val response = RetrofitClient.instance.getScheduleDetail(schedule.schedId)
+                                                        if (response.isSuccessful && response.body()?.data != null) {
+                                                            val detail = response.body()!!.data!!
+                                                            selectedTaskDetail = ScheduleTask(
+                                                                title = detail.taskTitle,
+                                                                status = detail.status.replaceFirstChar { it.uppercase() },
+                                                                time = "${formatTimeOnly(detail.startTime)} - ${formatTimeOnly(detail.endTime)}",
+                                                                location = "Barn ${detail.barnId}",
+                                                                details = detail.description,
+                                                                note = detail.note
+                                                            )
+                                                        }
+                                                    } catch (e: Exception) { } finally {
+                                                        isDetailLoading = false
+                                                    }
+                                                }
+                                            }
+                                        )
+                                        if (index < schedules.take(4).size - 1) {
+                                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // Today Schedule Completed Section
-            item {
-                val completedCount = schedules.count { it.status.equals("Completed", ignoreCase = true) }
-                val totalCount = schedules.size
-                val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
-                val percentage = if (totalCount > 0) (completedCount.toFloat() / totalCount * 100).toInt() else 0
+                // Today Schedule Completed Section
+                item {
+                    val completedCount = schedules.count { it.status.equals("Completed", ignoreCase = true) }
+                    val totalCount = schedules.size
+                    val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
+                    val percentage = if (totalCount > 0) (completedCount.toFloat() / totalCount * 100).toInt() else 0
 
-                Column {
-                    Text("Today Schedule Completed", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text("Schedules Completed", fontSize = 12.sp, color = Color.Gray)
-                                    Text("$completedCount/$totalCount", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Column {
+                        Text("Today Schedule Completed", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text("Schedules Completed", fontSize = 12.sp, color = Color.Gray)
+                                        Text("$completedCount/$totalCount", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = Color(0xFF00C853), modifier = Modifier.size(16.dp))
+                                        Text("$percentage%", color = Color(0xFF00C853), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    }
                                 }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = Color(0xFF00C853), modifier = Modifier.size(16.dp))
-                                    Text("$percentage%", color = Color(0xFF00C853), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                LinearProgressIndicator(
+                                    progress = { progress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp),
+                                    color = Color(0xFF00897B),
+                                    trackColor = Color(0xFFE0F2F1),
+                                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom Sheet for Detail View
+        if (showBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { 
+                    showBottomSheet = false 
+                    selectedTaskDetail = null
+                    selectedTaskId = -1
+                },
+                sheetState = sheetState,
+                containerColor = Color.White,
+                dragHandle = null
+            ) {
+                Box(modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp)) {
+                    if (isDetailLoading) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF00A67E))
+                    } else if (selectedTaskDetail != null) {
+                        ScheduleDetailContent(
+                            task = selectedTaskDetail!!,
+                            onMarkComplete = {
+                                showBottomSheet = false
+                                if (selectedTaskId != -1) {
+                                    updateStatus(selectedTaskId)
                                 }
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            LinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp),
-                                color = Color(0xFF00897B),
-                                trackColor = Color(0xFFE0F2F1),
-                                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
-                            )
-                        }
+                        )
                     }
                 }
             }
@@ -385,11 +469,13 @@ fun AlertItem(
 fun DashboardTaskItem(
     title: String,
     time: String,
-    isCompleted: Boolean
+    isCompleted: Boolean,
+    onClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -13,6 +13,8 @@ object RetrofitClient {
     // 10.0.2.2 is the special IP to reach your computer's localhost from the Android Emulator
     // Using the HTTPS port (7132) from your Swagger
     private const val BASE_URL = "https://10.0.2.2:7132/"
+//    private const val BASE_URL = "http://192.168.1.235:5123/"
+
 
     val instance: ApiService by lazy {
         val retrofit = Retrofit.Builder()

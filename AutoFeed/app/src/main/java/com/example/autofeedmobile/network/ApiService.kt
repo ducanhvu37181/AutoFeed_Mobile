@@ -26,4 +26,7 @@ interface ApiService {
         @Path("id") id: Int,
         @Body status: String
     ): Response<Unit>
+
+    @GET("api/Request/user/{userId}")
+    suspend fun getRequests(@Path("userId") userId: Int): Response<RequestListResponse>
 }
