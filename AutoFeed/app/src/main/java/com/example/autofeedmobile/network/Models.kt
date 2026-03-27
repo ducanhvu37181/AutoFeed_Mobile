@@ -22,8 +22,10 @@ data class ScheduleData(
     val note: String?,
     val priority: String,
     val status: String,
-    val startDate: String,
-    val endDate: String,
+    val startDate: String?,
+    val endDate: String?,
+    val startTime: String?,
+    val endTime: String?,
     val barnId: Int,
     val taskTitle: String,
     val username: String
@@ -40,5 +42,21 @@ data class ScheduleDetailResponse(
     val status: Boolean,
     val httpCode: Int,
     val data: ScheduleData,
+    val description: String
+)
+
+data class RequestData(
+    val requestId: Int,
+    val userId: Int,
+    val type: String,
+    val description: String,
+    val status: String,
+    val createdAt: String
+)
+
+data class RequestListResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: List<RequestData>?,
     val description: String
 )

@@ -19,6 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autofeedmobile.network.RequestData
+import com.example.autofeedmobile.network.RetrofitClient
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,7 +35,42 @@ fun RequestScreen(
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
-    val filters = listOf("All", "Pending", "In Progress", "Approved", "Rejected")
+    val filters = listOf("All", "Pending", "Approved", "Rejected")
+
+    val scope = rememberCoroutineScope()
+    var requests by remember { mutableStateOf<List<RequestData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    fun fetchRequests() {
+        isLoading = true
+        scope.launch {
+            try {
+                val response = RetrofitClient.instance.getRequests(userId)
+                if (response.isSuccessful) {
+                    requests = response.body()?.data ?: emptyList()
+                } else {
+                    errorMessage = "Failed to load requests"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Network error: ${e.localizedMessage}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    LaunchedEffect(userId) {
+        fetchRequests()
+    }
+
+    val filteredRequests = requests.filter { request ->
+        val matchesFilter = if (selectedFilter == "All") true 
+                            else request.status.equals(selectedFilter, ignoreCase = true)
+        val matchesSearch = request.type.contains(searchQuery, ignoreCase = true) || 
+                            request.description.contains(searchQuery, ignoreCase = true)
+        matchesFilter && matchesSearch
+    }
 
     Scaffold(
         topBar = {
@@ -144,9 +182,19 @@ fun RequestScreen(
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                RequestSummaryCard(modifier = Modifier.weight(1f), label = "Total", value = "5")
-                RequestSummaryCard(modifier = Modifier.weight(1f), label = "Pending", value = "1", valueColor = Color(0xFFFFA000))
-                RequestSummaryCard(modifier = Modifier.weight(1f), label = "Active", value = "1", valueColor = Color(0xFF2196F3))
+                RequestSummaryCard(modifier = Modifier.weight(1f), label = "Total", value = requests.size.toString())
+                RequestSummaryCard(
+                    modifier = Modifier.weight(1f), 
+                    label = "Pending", 
+                    value = requests.count { it.status.equals("Pending", ignoreCase = true) }.toString(), 
+                    valueColor = Color(0xFFFFA000)
+                )
+                RequestSummaryCard(
+                    modifier = Modifier.weight(1f), 
+                    label = "Approved", 
+                    value = requests.count { it.status.equals("Approved", ignoreCase = true) }.toString(), 
+                    valueColor = Color(0xFF00C853)
+                )
             }
 
             // Search Bar
@@ -190,41 +238,55 @@ fun RequestScreen(
             }
 
             // Request List
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                item {
-                    RequestItemCard(
-                        id = "REQ001",
-                        priority = "High",
-                        title = "Restock Premium Feed",
-                        description = "Need 500kg of premium feed",
-                        category = "Inventory",
-                        date = "2026-02-05",
-                        status = "Pending",
-                        statusColor = Color(0xFFFFF8E1),
-                        statusTextColor = Color(0xFFFFA000)
-                    )
-                }
-                item {
-                    RequestItemCard(
-                        id = "REQ002",
-                        priority = "Medium",
-                        title = "Repair Water Dispenser",
-                        description = "Dispenser in Cage A-03 not working",
-                        category = "Maintenance",
-                        date = "2026-02-04",
-                        status = "In Progress",
-                        statusColor = Color(0xFFE3F2FD),
-                        statusTextColor = Color(0xFF2196F3)
-                    )
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF00897B))
+                } else if (errorMessage != null) {
+                    Text(errorMessage!!, modifier = Modifier.align(Alignment.Center), color = Color.Red)
+                } else if (filteredRequests.isEmpty()) {
+                    Text("No requests found", modifier = Modifier.align(Alignment.Center), color = Color.Gray)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        items(filteredRequests) { request ->
+                            val statusInfo = getStatusInfo(request.status)
+                            RequestItemCard(
+                                id = "REQ${request.requestId.toString().padStart(3, '0')}",
+                                type = request.type,
+                                description = request.description,
+                                date = formatCreatedAt(request.createdAt),
+                                status = request.status.replaceFirstChar { it.uppercase() },
+                                statusColor = statusInfo.first,
+                                statusTextColor = statusInfo.second
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+fun formatCreatedAt(createdAt: String): String {
+    return try {
+        // "2026-03-27T00:05:17.853" -> "2026-03-27"
+        createdAt.split("T")[0]
+    } catch (e: Exception) {
+        createdAt
+    }
+}
+
+fun getStatusInfo(status: String): Pair<Color, Color> {
+    return when (status.lowercase()) {
+        "pending" -> Pair(Color(0xFFFFF8E1), Color(0xFFFFA000))
+        "approved" -> Pair(Color(0xFFE8F5E9), Color(0xFF00C853))
+        "rejected" -> Pair(Color(0xFFFFEBEE), Color(0xFFD32F2F))
+        else -> Pair(Color(0xFFF5F5F5), Color(0xFF757575))
     }
 }
 
@@ -251,10 +313,8 @@ fun RequestSummaryCard(
 @Composable
 fun RequestItemCard(
     id: String,
-    priority: String,
-    title: String,
+    type: String,
     description: String,
-    category: String,
     date: String,
     status: String,
     statusColor: Color,
@@ -272,33 +332,12 @@ fun RequestItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(id, fontSize = 12.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        color = when(priority) {
-                            "High" -> Color(0xFFFFEBEE)
-                            else -> Color(0xFFFFF3E0)
-                        },
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            priority,
-                            color = when(priority) {
-                                "High" -> Color.Red
-                                else -> Color(0xFFEF6C00)
-                            },
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                        )
-                    }
-                }
+                Text(id, fontSize = 12.sp, color = Color.Gray)
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
             }
             
             Spacer(modifier = Modifier.height(8.dp))
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(type, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Text(description, fontSize = 14.sp, color = Color(0xFF455A64))
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -308,7 +347,7 @@ fun RequestItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("$category  •  $date", fontSize = 12.sp, color = Color.Gray)
+                Text(date, fontSize = 12.sp, color = Color.Gray)
                 Surface(
                     color = statusColor,
                     shape = RoundedCornerShape(12.dp)
