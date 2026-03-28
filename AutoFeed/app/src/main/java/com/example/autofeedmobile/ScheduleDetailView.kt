@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.sp
 data class ScheduleTask(
     val title: String,
     val status: String, // "Completed", "Pending", "In Progress"
+    val priority: String,
     val time: String,
     val location: String,
     val details: String,
@@ -29,7 +31,7 @@ data class ScheduleTask(
 @Composable
 fun ScheduleDetailContent(
     task: ScheduleTask,
-    onMarkComplete: () -> Unit = {}
+    onStatusUpdate: (String) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -48,13 +50,46 @@ fun ScheduleDetailContent(
         
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Title
-        Text(
-            text = task.title,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF1A1A1A)
-        )
+        // Title and Priority Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = task.title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A1A1A),
+                modifier = Modifier.weight(1f)
+            )
+            
+            val priorityColor = when (task.priority.lowercase()) {
+                "high" -> Color(0xFFFFEBEE)
+                "medium" -> Color(0xFFFFF3E0)
+                "low" -> Color(0xFFE8F5E9)
+                else -> Color(0xFFF5F5F5)
+            }
+            val priorityTextColor = when (task.priority.lowercase()) {
+                "high" -> Color(0xFFD32F2F)
+                "medium" -> Color(0xFFEF6C00)
+                "low" -> Color(0xFF2E7D32)
+                else -> Color(0xFF616161)
+            }
+
+            Surface(
+                color = priorityColor,
+                shape = RoundedCornerShape(4.dp)
+            ) {
+                Text(
+                    text = task.priority,
+                    color = priorityTextColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -62,12 +97,14 @@ fun ScheduleDetailContent(
         val statusColor = when (task.status) {
             "Completed" -> Color(0xFFE8F5E9)
             "Pending" -> Color(0xFFE3F2FD)
-            else -> Color(0xFFFFF3E0)
+            "In Progress" -> Color(0xFFFFF3E0)
+            else -> Color(0xFFF5F5F5)
         }
         val statusTextColor = when (task.status) {
             "Completed" -> Color(0xFF2E7D32)
             "Pending" -> Color(0xFF1565C0)
-            else -> Color(0xFFEF6C00)
+            "In Progress" -> Color(0xFFEF6C00)
+            else -> Color(0xFF616161)
         }
 
         Surface(
@@ -151,9 +188,12 @@ fun ScheduleDetailContent(
         Spacer(modifier = Modifier.height(32.dp))
 
         // Action Button
-        if (task.status != "Completed") {
+        if (task.status.equals("Pending", ignoreCase = true) || task.status.equals("In Progress", ignoreCase = true)) {
+            val buttonText = if (task.status.equals("Pending", ignoreCase = true)) "Begin Schedule" else "Mark as Complete"
+            val nextStatus = if (task.status.equals("Pending", ignoreCase = true)) "In Progress" else "Completed"
+            
             Button(
-                onClick = onMarkComplete,
+                onClick = { onStatusUpdate(nextStatus) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
@@ -161,7 +201,7 @@ fun ScheduleDetailContent(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00A67E))
             ) {
                 Text(
-                    text = "Mark as Complete",
+                    text = buttonText,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -218,6 +258,7 @@ fun ScheduleDetailPreview() {
         task = ScheduleTask(
             title = "Morning Feeding - Barn A",
             status = "Completed",
+            priority = "High",
             time = "06:00 AM",
             location = "Barn A",
             details = "Complete the scheduled feeding task for the assigned location. Ensure all procedures are followed and report any issues.",
@@ -233,6 +274,7 @@ fun ScheduleDetailPendingPreview() {
         task = ScheduleTask(
             title = "Noon Feeding - Barn A",
             status = "Pending",
+            priority = "Medium",
             time = "12:00 PM",
             location = "Barn A",
             details = "Complete the scheduled feeding task for the assigned location. Ensure all procedures are followed and report any issues.",

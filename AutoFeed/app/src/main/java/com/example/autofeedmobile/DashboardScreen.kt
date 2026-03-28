@@ -62,10 +62,10 @@ fun DashboardScreen(
         }
     }
 
-    fun updateStatus(id: Int) {
+    fun updateStatus(id: Int, newStatus: String) {
         scope.launch {
             try {
-                val response = RetrofitClient.instance.updateScheduleStatus(id, "Completed")
+                val response = RetrofitClient.instance.updateScheduleStatus(id, newStatus)
                 if (response.isSuccessful) {
                     fetchSchedules() // Refresh dashboard
                 }
@@ -279,6 +279,7 @@ fun DashboardScreen(
                                         DashboardTaskItem(
                                             title = schedule.taskTitle,
                                             time = formatTimeOnly(schedule.startTime),
+                                            priority = schedule.priority,
                                             isCompleted = schedule.status.equals("Completed", ignoreCase = true),
                                             onClick = {
                                                 selectedTaskId = schedule.schedId
@@ -292,6 +293,7 @@ fun DashboardScreen(
                                                             selectedTaskDetail = ScheduleTask(
                                                                 title = detail.taskTitle,
                                                                 status = detail.status.replaceFirstChar { it.uppercase() },
+                                                                priority = detail.priority.replaceFirstChar { it.uppercase() },
                                                                 time = "${formatTimeOnly(detail.startTime)} - ${formatTimeOnly(detail.endTime)}",
                                                                 location = "Barn ${detail.barnId}",
                                                                 details = detail.description,
@@ -379,10 +381,10 @@ fun DashboardScreen(
                     } else if (selectedTaskDetail != null) {
                         ScheduleDetailContent(
                             task = selectedTaskDetail!!,
-                            onMarkComplete = {
+                            onStatusUpdate = { newStatus ->
                                 showBottomSheet = false
                                 if (selectedTaskId != -1) {
-                                    updateStatus(selectedTaskId)
+                                    updateStatus(selectedTaskId, newStatus)
                                 }
                             }
                         )
@@ -469,6 +471,7 @@ fun AlertItem(
 fun DashboardTaskItem(
     title: String,
     time: String,
+    priority: String,
     isCompleted: Boolean,
     onClick: () -> Unit = {}
 ) {
@@ -498,7 +501,36 @@ fun DashboardTaskItem(
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                val priorityColor = when (priority.lowercase()) {
+                    "high" -> Color(0xFFFFEBEE)
+                    "medium" -> Color(0xFFFFF3E0)
+                    "low" -> Color(0xFFE8F5E9)
+                    else -> Color(0xFFF5F5F5)
+                }
+                val priorityTextColor = when (priority.lowercase()) {
+                    "high" -> Color(0xFFD32F2F)
+                    "medium" -> Color(0xFFEF6C00)
+                    "low" -> Color(0xFF2E7D32)
+                    else -> Color(0xFF616161)
+                }
+                
+                Surface(
+                    color = priorityColor,
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        text = priority,
+                        color = priorityTextColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
             Text(time, fontSize = 12.sp, color = Color.Gray)
         }
         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)

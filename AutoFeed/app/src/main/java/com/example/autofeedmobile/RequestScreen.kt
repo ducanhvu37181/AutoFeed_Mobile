@@ -42,6 +42,14 @@ fun RequestScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Detail state
+    var selectedRequestDetail by remember { mutableStateOf<RequestTask?>(null) }
+    var showDetailBottomSheet by remember { mutableStateOf(false) }
+    var showCreateBottomSheet by remember { mutableStateOf(false) }
+    
+    val detailSheetState = rememberModalBottomSheetState()
+    val createSheetState = rememberModalBottomSheetState()
+
     fun fetchRequests() {
         isLoading = true
         scope.launch {
@@ -160,7 +168,7 @@ fun RequestScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { },
+                onClick = { showCreateBottomSheet = true },
                 containerColor = Color(0xFF00897B),
                 contentColor = Color.White,
                 shape = CircleShape
@@ -255,18 +263,66 @@ fun RequestScreen(
                     ) {
                         items(filteredRequests) { request ->
                             val statusInfo = getStatusInfo(request.status)
+                            val reqIdStr = "REQ${request.requestId.toString().padStart(3, '0')}"
                             RequestItemCard(
-                                id = "REQ${request.requestId.toString().padStart(3, '0')}",
+                                id = reqIdStr,
                                 type = request.type,
                                 description = request.description,
                                 date = formatCreatedAt(request.createdAt),
                                 status = request.status.replaceFirstChar { it.uppercase() },
                                 statusColor = statusInfo.first,
-                                statusTextColor = statusInfo.second
+                                statusTextColor = statusInfo.second,
+                                onClick = {
+                                    selectedRequestDetail = RequestTask(
+                                        id = reqIdStr,
+                                        title = request.type,
+                                        status = request.status.replaceFirstChar { it.uppercase() },
+                                        type = request.type,
+                                        createDate = formatCreatedAt(request.createdAt),
+                                        description = request.description
+                                    )
+                                    showDetailBottomSheet = true
+                                }
                             )
                         }
                     }
                 }
+            }
+        }
+
+        // Bottom Sheet for Detail View
+        if (showDetailBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { 
+                    showDetailBottomSheet = false 
+                    selectedRequestDetail = null
+                },
+                sheetState = detailSheetState,
+                containerColor = Color.White,
+                dragHandle = null
+            ) {
+                if (selectedRequestDetail != null) {
+                    RequestDetailContent(request = selectedRequestDetail!!)
+                }
+            }
+        }
+
+        // Bottom Sheet for Send Request
+        if (showCreateBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showCreateBottomSheet = false },
+                sheetState = createSheetState,
+                containerColor = Color.White,
+                dragHandle = null
+            ) {
+                SendRequestContent(
+                    userId = userId,
+                    onSuccess = {
+                        showCreateBottomSheet = false
+                        fetchRequests() // Refresh list
+                    },
+                    onCancel = { showCreateBottomSheet = false }
+                )
             }
         }
     }
@@ -318,13 +374,15 @@ fun RequestItemCard(
     date: String,
     status: String,
     statusColor: Color,
-    statusTextColor: Color
+    statusTextColor: Color,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = onClick
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
