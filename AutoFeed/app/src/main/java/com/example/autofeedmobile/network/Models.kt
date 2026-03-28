@@ -60,3 +60,9 @@ data class RequestListResponse(
     val data: List<RequestData>?,
     val description: String
 )
+
+data class CreateRequestDto(
+    val userId: Int,
+    val type: String,
+    val description: String
+)

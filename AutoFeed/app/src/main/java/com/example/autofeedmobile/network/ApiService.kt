@@ -35,4 +35,7 @@ interface ApiService {
 
     @GET("api/Request/user/{userId}")
     suspend fun getRequests(@Path("userId") userId: Int): Response<RequestListResponse>
+
+    @POST("api/Request")
+    suspend fun createRequest(@Body request: CreateRequestDto): Response<Unit>
 }
