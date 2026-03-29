@@ -38,4 +38,10 @@ interface ApiService {
 
     @POST("api/Request")
     suspend fun createRequest(@Body request: CreateRequestDto): Response<Unit>
+
+    @GET("api/Inventory")
+    suspend fun getInventory(
+        @Query("search") search: String? = null,
+        @Query("type") type: String? = null
+    ): Response<InventoryListResponse>
 }

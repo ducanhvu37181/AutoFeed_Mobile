@@ -66,3 +66,22 @@ data class CreateRequestDto(
     val type: String,
     val description: String
 )
+
+data class InventoryData(
+    val inventId: Int,
+    val foodId: Int,
+    val foodName: String,
+    val foodType: String,
+    val quantity: Int,
+    val weightPerBag: Int,
+    val totalWeight: Int,
+    val expiredDate: String,
+    val status: String
+)
+
+data class InventoryListResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: List<InventoryData>,
+    val description: String
+)

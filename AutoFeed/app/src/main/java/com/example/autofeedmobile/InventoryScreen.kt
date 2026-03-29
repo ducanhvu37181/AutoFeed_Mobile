@@ -1,8 +1,10 @@
 package com.example.autofeedmobile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,11 +19,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autofeedmobile.network.InventoryData
+import com.example.autofeedmobile.network.RetrofitClient
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventoryScreen(
     userId: Int,
+    userFullName: String,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
@@ -29,6 +35,41 @@ fun InventoryScreen(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    
+    val scope = rememberCoroutineScope()
+    var inventoryList by remember { mutableStateOf<List<InventoryData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Detail state
+    var selectedItem by remember { mutableStateOf<InventoryData?>(null) }
+    val sheetState = rememberModalBottomSheetState()
+    var showBottomSheet by remember { mutableStateOf(false) }
+
+    fun fetchInventory() {
+        isLoading = true
+        scope.launch {
+            try {
+                val response = RetrofitClient.instance.getInventory(
+                    search = if (searchQuery.isNotBlank()) searchQuery else null
+                )
+                if (response.isSuccessful) {
+                    inventoryList = response.body()?.data ?: emptyList()
+                    errorMessage = null
+                } else {
+                    errorMessage = "Failed to load inventory"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Network error: ${e.localizedMessage}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    LaunchedEffect(searchQuery) {
+        fetchInventory()
+    }
 
     Scaffold(
         topBar = {
@@ -36,7 +77,7 @@ fun InventoryScreen(
                 title = {
                     Column {
                         Text("AutoFeed", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("Inventory", color = Color.White, fontSize = 14.sp)
+                        Text("Inventory Management", color = Color.White, fontSize = 14.sp)
                     }
                 },
                 actions = {
@@ -56,7 +97,7 @@ fun InventoryScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "John Farmer",
+                                    text = userFullName,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = Color(0xFF1A1A1A)
@@ -140,36 +181,20 @@ fun InventoryScreen(
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Card(
+                InventorySummaryCard(
                     modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Inventory2, contentDescription = null, tint = Color(0xFF00A67E), modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Total Items", fontSize = 12.sp, color = Color.Gray)
-                        }
-                        Text("8", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Card(
+                    icon = Icons.Default.Inventory2,
+                    label = "Total Items",
+                    value = inventoryList.size.toString(),
+                    color = Color(0xFF00A67E)
+                )
+                InventorySummaryCard(
                     modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFF5722), modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Low Stock", fontSize = 12.sp, color = Color.Gray)
-                        }
-                        Text("1", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF5722))
-                    }
-                }
+                    icon = Icons.Default.Warning,
+                    label = "Low Stock",
+                    value = inventoryList.count { it.status.lowercase() == "low" }.toString(),
+                    color = Color(0xFFFF5722)
+                )
             }
 
             // Search Bar
@@ -194,34 +219,77 @@ fun InventoryScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Inventory List
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                item {
-                    InventoryItemCard(
-                        name = "Premium Chicken Feed",
-                        id = "FD001",
-                        location = "Storage A",
-                        quantity = "850 kg",
-                        minStock = "200 kg",
-                        status = "Sufficient"
-                    )
-                }
-                item {
-                    InventoryItemCard(
-                        name = "Protein Supplement",
-                        id = "FD002",
-                        location = "Storage A",
-                        quantity = "120 kg",
-                        minStock = "50 kg",
-                        status = "Sufficient"
-                    )
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF00897B))
+                } else if (errorMessage != null) {
+                    Text(errorMessage!!, modifier = Modifier.align(Alignment.Center), color = Color.Red)
+                } else if (inventoryList.isEmpty()) {
+                    Text("No inventory found", modifier = Modifier.align(Alignment.Center), color = Color.Gray)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        items(inventoryList) { item ->
+                            InventoryItemCard(
+                                name = item.foodName,
+                                type = item.foodType,
+                                quantity = "${item.quantity} Bags",
+                                expiry = item.expiredDate,
+                                status = item.status,
+                                onClick = {
+                                    selectedItem = item
+                                    showBottomSheet = true
+                                }
+                            )
+                        }
+                    }
                 }
             }
+        }
+
+        // Bottom Sheet for Detail View
+        if (showBottomSheet && selectedItem != null) {
+            ModalBottomSheet(
+                onDismissRequest = { 
+                    showBottomSheet = false 
+                    selectedItem = null
+                },
+                sheetState = sheetState,
+                containerColor = Color.White,
+                dragHandle = null
+            ) {
+                InventoryDetailContent(item = selectedItem!!)
+            }
+        }
+    }
+}
+
+@Composable
+fun InventorySummaryCard(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    color: Color
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(label, fontSize = 12.sp, color = Color.Gray)
+            }
+            Text(value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = if (value != "0" && color == Color(0xFFFF5722)) color else Color.Black)
         }
     }
 }
@@ -229,14 +297,14 @@ fun InventoryScreen(
 @Composable
 fun InventoryItemCard(
     name: String,
-    id: String,
-    location: String,
+    type: String,
     quantity: String,
-    minStock: String,
-    status: String
+    expiry: String,
+    status: String,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -249,29 +317,50 @@ fun InventoryItemCard(
             ) {
                 Column {
                     Text(name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("$id • $location", fontSize = 12.sp, color = Color.Gray)
+                    Text(type, fontSize = 12.sp, color = Color.Gray)
                 }
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Quantity", fontSize = 12.sp, color = Color.Gray)
+                    Text("Quantity", fontSize = 11.sp, color = Color.Gray)
                     Text(quantity, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Min Stock", fontSize = 12.sp, color = Color.Gray)
-                    Text(minStock, fontSize = 14.sp)
+                Column(modifier = Modifier.weight(1.2f)) {
+                    Text("Expires", fontSize = 11.sp, color = Color.Gray)
+                    Text(expiry, fontSize = 14.sp)
                 }
-                Box(
-                    modifier = Modifier
-                        .background(Color(0xFFE8F5E9), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    contentAlignment = Alignment.Center
+                
+                val statusColor = when (status.lowercase()) {
+                    "good" -> Color(0xFFE8F5E9)
+                    "low" -> Color(0xFFFFF8E1)
+                    "expired" -> Color(0xFFFFEBEE)
+                    else -> Color(0xFFF5F5F5)
+                }
+                val statusTextColor = when (status.lowercase()) {
+                    "good" -> Color(0xFF00C853)
+                    "low" -> Color(0xFFFFA000)
+                    "expired" -> Color(0xFFD32F2F)
+                    else -> Color(0xFF757575)
+                }
+                
+                Surface(
+                    color = statusColor,
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(status, color = Color(0xFF2E7D32), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        text = status.replaceFirstChar { it.uppercase() },
+                        color = statusTextColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
                 }
             }
         }
@@ -281,5 +370,5 @@ fun InventoryItemCard(
 @Preview(showBackground = true)
 @Composable
 fun InventoryScreenPreview() {
-    InventoryScreen(userId = 1)
+    InventoryScreen(userId = 1, userFullName = "John Farmer")
 }
