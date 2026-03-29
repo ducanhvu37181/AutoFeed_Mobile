@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
+import com.example.autofeedmobile.network.UserResponse
 import com.example.autofeedmobile.ui.theme.AutoFeedMobileTheme
 
 enum class Screen {
@@ -19,17 +20,20 @@ class MainActivity : ComponentActivity() {
             AutoFeedMobileTheme {
                 var currentScreen by remember { mutableStateOf(Screen.Login) }
                 var userId by remember { mutableIntStateOf(-1) }
+                var userFullName by remember { mutableStateOf("") }
 
                 when (currentScreen) {
                     Screen.Login -> {
-                        LoginScreen(onLoginSuccess = { id ->
-                            userId = id
+                        LoginScreen(onLoginSuccess = { user ->
+                            userId = user.userId
+                            userFullName = user.fullName
                             currentScreen = Screen.Dashboard
                         })
                     }
                     Screen.Dashboard -> {
                         DashboardScreen(
                             userId = userId,
+                            userFullName = userFullName,
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
@@ -39,6 +43,7 @@ class MainActivity : ComponentActivity() {
                     Screen.Inventory -> {
                         InventoryScreen(
                             userId = userId,
+                            userFullName = userFullName,
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
@@ -48,6 +53,7 @@ class MainActivity : ComponentActivity() {
                     Screen.Schedule -> {
                         ScheduleScreen(
                             userId = userId,
+                            userFullName = userFullName,
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
@@ -57,6 +63,7 @@ class MainActivity : ComponentActivity() {
                     Screen.Requests -> {
                         RequestScreen(
                             userId = userId,
+                            userFullName = userFullName,
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },

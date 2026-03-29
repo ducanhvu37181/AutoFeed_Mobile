@@ -29,6 +29,7 @@ import java.util.*
 @Composable
 fun ScheduleScreen(
     userId: Int,
+    userFullName: String,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
@@ -130,7 +131,7 @@ fun ScheduleScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "John Farmer",
+                                    text = userFullName,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = Color(0xFF1A1A1A)
@@ -529,4 +530,10 @@ fun ScheduleItem(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ScheduleScreenPreview() {
+    ScheduleScreen(userId = 1, userFullName = "John Farmer")
 }

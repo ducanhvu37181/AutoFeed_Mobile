@@ -18,10 +18,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.network.UserResponse
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(onLoginSuccess: (Int) -> Unit = {}) {
+fun LoginScreen(onLoginSuccess: (UserResponse) -> Unit = {}) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -161,7 +162,7 @@ fun LoginScreen(onLoginSuccess: (Int) -> Unit = {}) {
                                 try {
                                     val response = RetrofitClient.instance.login(email, password)
                                     if (response.isSuccessful && response.body()?.user != null) {
-                                        onLoginSuccess(response.body()!!.user!!.userId)
+                                        onLoginSuccess(response.body()!!.user!!)
                                     } else {
                                         errorMessage = "Login failed: Invalid credentials"
                                     }

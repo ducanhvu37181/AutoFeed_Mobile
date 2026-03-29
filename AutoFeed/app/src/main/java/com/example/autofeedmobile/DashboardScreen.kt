@@ -21,14 +21,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autofeedmobile.network.InventoryData
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.ScheduleData
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     userId: Int,
+    userFullName: String,
     onLogout: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
@@ -36,6 +40,7 @@ fun DashboardScreen(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
+    var inventoryList by remember { mutableStateOf<List<InventoryData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
@@ -46,13 +51,23 @@ fun DashboardScreen(
     var showBottomSheet by remember { mutableStateOf(false) }
     var isDetailLoading by remember { mutableStateOf(false) }
 
-    fun fetchSchedules() {
+    val apiDateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+
+    fun fetchDashboardData() {
         isLoading = true
         scope.launch {
             try {
-                val response = RetrofitClient.instance.getSchedules(userId)
-                if (response.isSuccessful) {
-                    schedules = response.body()?.data ?: emptyList()
+                // Fetch Today's Schedules
+                val today = apiDateFormatter.format(Date())
+                val scheduleResponse = RetrofitClient.instance.getSchedulesByDate(userId, today)
+                if (scheduleResponse.isSuccessful) {
+                    schedules = scheduleResponse.body()?.data ?: emptyList()
+                }
+                
+                // Fetch Inventory for Summary
+                val inventoryResponse = RetrofitClient.instance.getInventory()
+                if (inventoryResponse.isSuccessful) {
+                    inventoryList = inventoryResponse.body()?.data ?: emptyList()
                 }
             } catch (e: Exception) {
                 // handle error
@@ -67,7 +82,7 @@ fun DashboardScreen(
             try {
                 val response = RetrofitClient.instance.updateScheduleStatus(id, newStatus)
                 if (response.isSuccessful) {
-                    fetchSchedules() // Refresh dashboard
+                    fetchDashboardData() // Refresh dashboard
                 }
             } catch (e: Exception) {
                 // handle error
@@ -76,7 +91,7 @@ fun DashboardScreen(
     }
 
     LaunchedEffect(userId) {
-        fetchSchedules()
+        fetchDashboardData()
     }
 
     Scaffold(
@@ -114,7 +129,7 @@ fun DashboardScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "John Farmer",
+                                    text = userFullName,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = Color(0xFF1A1A1A)
@@ -185,7 +200,7 @@ fun DashboardScreen(
             ) {
                 // Summary Cards Grid
                 item {
-                    val completedCount = schedules.count { it.status.equals("Completed", ignoreCase = true) }
+                    val lowStockCount = inventoryList.count { it.status.lowercase() == "low" }
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SummaryCard(
@@ -201,7 +216,7 @@ fun DashboardScreen(
                                 icon = Icons.Default.Inventory2,
                                 iconContainerColor = Color(0xFF2196F3).copy(alpha = 0.1f),
                                 iconColor = Color(0xFF2196F3),
-                                value = "8",
+                                value = "${inventoryList.size}",
                                 label = "Inventory Items"
                             )
                         }
@@ -219,7 +234,7 @@ fun DashboardScreen(
                                 icon = Icons.Default.Warning,
                                 iconContainerColor = Color(0xFFFF5722).copy(alpha = 0.1f),
                                 iconColor = Color(0xFFFF5722),
-                                value = "2",
+                                value = "$lowStockCount",
                                 label = "Low Stock"
                             )
                         }
@@ -228,22 +243,42 @@ fun DashboardScreen(
 
                 // Alerts Section
                 item {
-                    Column {
-                        Text("Alerts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        AlertItem(
-                            title = "Low Stock",
-                            message = "Premium Chicken Feed below minimum",
-                            color = Color(0xFFFFEBEE),
-                            indicatorColor = Color.Red
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        AlertItem(
-                            title = "Temperature",
-                            message = "Cage B-02 temperature above normal",
-                            color = Color(0xFFFFF8E1),
-                            indicatorColor = Color(0xFFFFA000)
-                        )
+                    val lowStockItems = inventoryList.filter { it.status.lowercase() == "low" }
+                    if (lowStockItems.isNotEmpty()) {
+                        Column {
+                            Text("Alerts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            lowStockItems.take(2).forEach { item ->
+                                AlertItem(
+                                    title = "Low Stock",
+                                    message = "${item.foodName} below minimum",
+                                    color = Color(0xFFFFEBEE),
+                                    indicatorColor = Color.Red,
+                                    onClick = onNavigateToInventory
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                            // Original placeholder if needed or additional logic
+                            if (lowStockItems.size < 2) {
+                                AlertItem(
+                                    title = "Temperature",
+                                    message = "Cage B-02 temperature above normal",
+                                    color = Color(0xFFFFF8E1),
+                                    indicatorColor = Color(0xFFFFA000)
+                                )
+                            }
+                        }
+                    } else {
+                        Column {
+                            Text("Alerts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            AlertItem(
+                                title = "Normal Status",
+                                message = "All systems operating normally",
+                                color = Color(0xFFE8F5E9),
+                                indicatorColor = Color(0xFF2E7D32)
+                            )
+                        }
                     }
                 }
 
@@ -432,10 +467,11 @@ fun AlertItem(
     title: String,
     message: String,
     color: Color,
-    indicatorColor: Color
+    indicatorColor: Color,
+    onClick: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = color)
     ) {

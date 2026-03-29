@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun RequestScreen(
     userId: Int,
+    userFullName: String,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
@@ -106,7 +107,7 @@ fun RequestScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "John Farmer",
+                                    text = userFullName,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = Color(0xFF1A1A1A)
@@ -426,5 +427,5 @@ fun RequestItemCard(
 @Preview(showBackground = true)
 @Composable
 fun RequestScreenPreview() {
-    RequestScreen(userId = 1)
+    RequestScreen(userId = 1, userFullName = "John Farmer")
 }
