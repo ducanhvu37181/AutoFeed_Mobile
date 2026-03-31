@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
@@ -20,47 +19,44 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.autofeedmobile.network.RequestData
+import com.example.autofeedmobile.network.ReportData
 import com.example.autofeedmobile.network.RetrofitClient
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RequestScreen(
+fun ReportScreen(
     userId: Int,
     userFullName: String,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
+    onNavigateToRequests: () -> Unit = {},
     onNavigateToReports: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf("All") }
-    val filters = listOf("All", "Pending", "Approved", "Rejected")
-
+    
     val scope = rememberCoroutineScope()
-    var requests by remember { mutableStateOf<List<RequestData>>(emptyList()) }
+    var reports by remember { mutableStateOf<List<ReportData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Detail state
-    var selectedRequestDetail by remember { mutableStateOf<RequestData?>(null) }
+    var selectedReportDetail by remember { mutableStateOf<ReportData?>(null) }
     var showDetailBottomSheet by remember { mutableStateOf(false) }
-    var showCreateBottomSheet by remember { mutableStateOf(false) }
-
+    
     val detailSheetState = rememberModalBottomSheetState()
 
-    fun fetchRequests() {
+    fun fetchReports() {
         isLoading = true
         scope.launch {
             try {
-                val response = RetrofitClient.instance.getRequests(userId)
+                val response = RetrofitClient.instance.getReports(userId)
                 if (response.isSuccessful) {
-                    requests = response.body()?.data ?: emptyList()
+                    reports = response.body()?.data ?: emptyList()
                 } else {
-                    errorMessage = "Failed to load requests"
+                    errorMessage = "Failed to load reports"
                 }
             } catch (e: Exception) {
                 errorMessage = "Network error: ${e.localizedMessage}"
@@ -71,15 +67,7 @@ fun RequestScreen(
     }
 
     LaunchedEffect(userId) {
-        fetchRequests()
-    }
-
-    val filteredRequests = requests.filter { request ->
-        val matchesFilter = if (selectedFilter == "All") true 
-                            else request.status.equals(selectedFilter, ignoreCase = true)
-        val matchesSearch = request.type.contains(searchQuery, ignoreCase = true) || 
-                            request.description.contains(searchQuery, ignoreCase = true)
-        matchesFilter && matchesSearch
+        fetchReports()
     }
 
     Scaffold(
@@ -88,7 +76,7 @@ fun RequestScreen(
                 title = {
                     Column {
                         Text("AutoFeed", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("My Requests", color = Color.White, fontSize = 14.sp)
+                        Text("My Reports", color = Color.White, fontSize = 14.sp)
                     }
                 },
                 actions = {
@@ -163,25 +151,15 @@ fun RequestScreen(
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Requests") },
                     label = { Text("Requests") },
-                    selected = true,
-                    onClick = {}
+                    selected = false,
+                    onClick = onNavigateToRequests
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Assessment, contentDescription = "Reports") },
                     label = { Text("Reports") },
-                    selected = false,
-                    onClick = onNavigateToReports
+                    selected = true,
+                    onClick = {}
                 )
-            }
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* showCreateBottomSheet = true */ },
-                containerColor = Color(0xFF00897B),
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Request")
             }
         }
     ) { innerPadding ->
@@ -191,69 +169,6 @@ fun RequestScreen(
                 .fillMaxSize()
                 .background(Color(0xFFF5F5F5))
         ) {
-            // Summary Cards
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                RequestSummaryCard(modifier = Modifier.weight(1f), label = "Total", value = requests.size.toString())
-                RequestSummaryCard(
-                    modifier = Modifier.weight(1f), 
-                    label = "Pending", 
-                    value = requests.count { it.status.equals("Pending", ignoreCase = true) }.toString(), 
-                    valueColor = Color(0xFFFFA000)
-                )
-                RequestSummaryCard(
-                    modifier = Modifier.weight(1f), 
-                    label = "Approved", 
-                    value = requests.count { it.status.equals("Approved", ignoreCase = true) }.toString(), 
-                    valueColor = Color(0xFF43A047)
-                )
-            }
-
-            // Search and Filter
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search requests...") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    ScrollableTabRow(
-                        selectedTabIndex = filters.indexOf(selectedFilter),
-                        edgePadding = 0.dp,
-                        containerColor = Color.Transparent,
-                        divider = {},
-                        indicator = {}
-                    ) {
-                        filters.forEach { filter ->
-                            FilterChip(
-                                selected = selectedFilter == filter,
-                                onClick = { selectedFilter = filter },
-                                label = { Text(filter) },
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Request List
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFF00897B))
@@ -262,14 +177,14 @@ fun RequestScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(errorMessage!!, color = Color.Red)
-                        Button(onClick = { fetchRequests() }, modifier = Modifier.padding(top = 8.dp)) {
+                        Button(onClick = { fetchReports() }, modifier = Modifier.padding(top = 8.dp)) {
                             Text("Retry")
                         }
                     }
                 }
-            } else if (filteredRequests.isEmpty()) {
+            } else if (reports.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No requests found", color = Color.Gray)
+                    Text("No reports found", color = Color.Gray)
                 }
             } else {
                 LazyColumn(
@@ -277,11 +192,11 @@ fun RequestScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(filteredRequests) { request ->
-                        RequestItem(
-                            request = request,
+                    items(reports) { report ->
+                        ReportItem(
+                            report = report,
                             onClick = {
-                                selectedRequestDetail = request
+                                selectedReportDetail = report
                                 showDetailBottomSheet = true
                             }
                         )
@@ -291,56 +206,29 @@ fun RequestScreen(
         }
     }
 
-    // Detail Bottom Sheet
-    if (showDetailBottomSheet && selectedRequestDetail != null) {
+    if (showDetailBottomSheet && selectedReportDetail != null) {
         ModalBottomSheet(
             onDismissRequest = { showDetailBottomSheet = false },
             sheetState = detailSheetState,
             containerColor = Color.White
         ) {
-            val task = RequestTask(
-                id = "REQ${selectedRequestDetail!!.requestId}",
-                title = selectedRequestDetail!!.type,
-                status = selectedRequestDetail!!.status,
-                type = selectedRequestDetail!!.type,
-                createDate = selectedRequestDetail!!.createdAt,
-                description = selectedRequestDetail!!.description
-            )
-            RequestDetailContent(request = task)
+            // Placeholder for report detail content
+            Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                Text(text = "Report Detail", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "ID: ${selectedReportDetail!!.reportId}")
+                Text(text = "Type: ${selectedReportDetail!!.type}")
+                Text(text = "Date: ${selectedReportDetail!!.createDate}")
+                Text(text = "Description: ${selectedReportDetail!!.description}")
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
     }
 }
 
 @Composable
-fun RequestSummaryCard(
-    modifier: Modifier = Modifier,
-    label: String,
-    value: String,
-    valueColor: Color = Color(0xFF1A1A1A)
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = label, fontSize = 12.sp, color = Color.Gray)
-            Text(
-                text = value,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = valueColor
-            )
-        }
-    }
-}
-
-@Composable
-fun RequestItem(
-    request: RequestData,
+fun ReportItem(
+    report: ReportData,
     onClick: () -> Unit
 ) {
     Card(
@@ -360,13 +248,13 @@ fun RequestItem(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(getRequestColor(request.type).copy(alpha = 0.1f)),
+                    .background(Color(0xFF00897B).copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    getRequestIcon(request.type),
+                    Icons.Default.Assessment,
                     contentDescription = null,
-                    tint = getRequestColor(request.type)
+                    tint = Color(0xFF00897B)
                 )
             }
             
@@ -374,62 +262,24 @@ fun RequestItem(
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = request.type,
+                    text = "Report #${report.reportId}",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
                 Text(
-                    text = request.description,
+                    text = "Date: ${report.createDate}",
                     fontSize = 14.sp,
-                    color = Color.Gray,
-                    maxLines = 1
+                    color = Color.Gray
                 )
             }
             
-            StatusChip(status = request.status)
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.LightGray)
         }
     }
 }
 
-@Composable
-fun StatusChip(status: String) {
-    val (backgroundColor, textColor) = when (status.lowercase()) {
-        "approved" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
-        "pending" -> Color(0xFFFFF8E1) to Color(0xFFF57C00)
-        "rejected" -> Color(0xFFFFEBEE) to Color(0xFFC62828)
-        else -> Color(0xFFF5F5F5) to Color(0xFF616161)
-    }
-    
-    Surface(
-        color = backgroundColor,
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Text(
-            text = status,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = textColor
-        )
-    }
-}
-
-fun getRequestIcon(type: String) = when (type.lowercase()) {
-    "feed" -> Icons.Default.Pets
-    "maintenance" -> Icons.Default.Build
-    "medical" -> Icons.Default.MedicalServices
-    else -> Icons.Default.Description
-}
-
-fun getRequestColor(type: String) = when (type.lowercase()) {
-    "feed" -> Color(0xFF4CAF50)
-    "maintenance" -> Color(0xFF2196F3)
-    "medical" -> Color(0xFFF44336)
-    else -> Color(0xFF9C27B0)
-}
-
 @Preview(showBackground = true)
 @Composable
-fun RequestScreenPreview() {
-    RequestScreen(userId = 1, userFullName = "John Doe")
+fun ReportScreenPreview() {
+    ReportScreen(userId = 1, userFullName = "John Doe")
 }

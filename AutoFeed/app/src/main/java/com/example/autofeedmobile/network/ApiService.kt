@@ -44,4 +44,10 @@ interface ApiService {
         @Query("search") search: String? = null,
         @Query("type") type: String? = null
     ): Response<InventoryListResponse>
+
+    @GET("api/Report/user/{userId}")
+    suspend fun getReports(@Path("userId") userId: Int): Response<ReportListResponse>
+
+    @POST("api/Report")
+    suspend fun createReport(@Body report: CreateReportDto): Response<Unit>
 }

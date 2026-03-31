@@ -33,7 +33,8 @@ fun ScheduleScreen(
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
-    onNavigateToRequests: () -> Unit = {}
+    onNavigateToRequests: () -> Unit = {},
+    onNavigateToReports: () -> Unit = {}
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Pending", "In Progress", "Completed")
@@ -188,6 +189,12 @@ fun ScheduleScreen(
                     label = { Text("Requests") },
                     selected = false,
                     onClick = onNavigateToRequests
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Assessment, contentDescription = "Reports") },
+                    label = { Text("Reports") },
+                    selected = false,
+                    onClick = onNavigateToReports
                 )
             }
         }

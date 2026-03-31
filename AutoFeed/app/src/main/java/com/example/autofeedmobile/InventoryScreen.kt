@@ -31,7 +31,8 @@ fun InventoryScreen(
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
-    onNavigateToRequests: () -> Unit = {}
+    onNavigateToRequests: () -> Unit = {},
+    onNavigateToReports: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -154,6 +155,12 @@ fun InventoryScreen(
                     label = { Text("Requests") },
                     selected = false,
                     onClick = onNavigateToRequests
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Assessment, contentDescription = "Reports") },
+                    label = { Text("Reports") },
+                    selected = false,
+                    onClick = onNavigateToReports
                 )
             }
         },

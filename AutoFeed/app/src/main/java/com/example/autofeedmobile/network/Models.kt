@@ -85,3 +85,27 @@ data class InventoryListResponse(
     val data: List<InventoryData>,
     val description: String
 )
+
+data class ReportData(
+    val reportId: Int,
+    val userId: Int,
+    val userName: String,
+    val userRole: String?,
+    val type: String,
+    val description: String,
+    val status: String,
+    val createDate: String
+)
+
+data class ReportListResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: List<ReportData>?,
+    val description: String
+)
+
+data class CreateReportDto(
+    val userId: Int,
+    val type: String,
+    val description: String
+)

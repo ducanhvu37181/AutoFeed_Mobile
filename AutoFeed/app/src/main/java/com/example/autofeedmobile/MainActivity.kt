@@ -9,7 +9,7 @@ import com.example.autofeedmobile.network.UserResponse
 import com.example.autofeedmobile.ui.theme.AutoFeedMobileTheme
 
 enum class Screen {
-    Login, Dashboard, Inventory, Schedule, Requests
+    Login, Dashboard, Inventory, Schedule, Requests, Reports
 }
 
 class MainActivity : ComponentActivity() {
@@ -37,7 +37,8 @@ class MainActivity : ComponentActivity() {
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
-                            onNavigateToRequests = { currentScreen = Screen.Requests }
+                            onNavigateToRequests = { currentScreen = Screen.Requests },
+                            onNavigateToReports = { currentScreen = Screen.Reports }
                         )
                     }
                     Screen.Inventory -> {
@@ -47,7 +48,8 @@ class MainActivity : ComponentActivity() {
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
-                            onNavigateToRequests = { currentScreen = Screen.Requests }
+                            onNavigateToRequests = { currentScreen = Screen.Requests },
+                            onNavigateToReports = { currentScreen = Screen.Reports }
                         )
                     }
                     Screen.Schedule -> {
@@ -57,7 +59,8 @@ class MainActivity : ComponentActivity() {
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
-                            onNavigateToRequests = { currentScreen = Screen.Requests }
+                            onNavigateToRequests = { currentScreen = Screen.Requests },
+                            onNavigateToReports = { currentScreen = Screen.Reports }
                         )
                     }
                     Screen.Requests -> {
@@ -67,7 +70,19 @@ class MainActivity : ComponentActivity() {
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
-                            onNavigateToSchedule = { currentScreen = Screen.Schedule }
+                            onNavigateToSchedule = { currentScreen = Screen.Schedule },
+                            onNavigateToReports = { currentScreen = Screen.Reports }
+                        )
+                    }
+                    Screen.Reports -> {
+                        ReportScreen(
+                            userId = userId,
+                            userFullName = userFullName,
+                            onLogout = { currentScreen = Screen.Login },
+                            onNavigateToDashboard = { currentScreen = Screen.Dashboard },
+                            onNavigateToInventory = { currentScreen = Screen.Inventory },
+                            onNavigateToSchedule = { currentScreen = Screen.Schedule },
+                            onNavigateToRequests = { currentScreen = Screen.Requests }
                         )
                     }
                 }

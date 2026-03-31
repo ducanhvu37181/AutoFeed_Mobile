@@ -36,7 +36,8 @@ fun DashboardScreen(
     onLogout: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
-    onNavigateToRequests: () -> Unit = {}
+    onNavigateToRequests: () -> Unit = {},
+    onNavigateToReports: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
@@ -186,6 +187,12 @@ fun DashboardScreen(
                     label = { Text("Requests") },
                     selected = false,
                     onClick = onNavigateToRequests
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Assessment, contentDescription = "Reports") },
+                    label = { Text("Reports") },
+                    selected = false,
+                    onClick = onNavigateToReports
                 )
             }
         }
