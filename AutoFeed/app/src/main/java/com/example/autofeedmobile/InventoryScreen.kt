@@ -186,21 +186,28 @@ fun InventoryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 InventorySummaryCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Inventory2,
-                    label = "Total Items",
+                    label = "Total",
                     value = inventoryList.size.toString(),
-                    color = Color(0xFF00A67E)
+                    color = Color(0xFF2196F3)
                 )
                 InventorySummaryCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Warning,
-                    label = "Low Stock",
-                    value = inventoryList.count { it.status.lowercase() == "low" }.toString(),
-                    color = Color(0xFFFF5722)
+                    label = "Low",
+                    value = inventoryList.count { it.quantity in 1..2 }.toString(),
+                    color = Color(0xFFFFA000)
+                )
+                InventorySummaryCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.ErrorOutline,
+                    label = "Out",
+                    value = inventoryList.count { it.quantity == 0 }.toString(),
+                    color = Color(0xFFD32F2F)
                 )
             }
 
@@ -242,12 +249,17 @@ fun InventoryScreen(
                         contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
                         items(inventoryList) { item ->
+                            val displayStatus = when {
+                                item.quantity == 0 -> "Out of Stock"
+                                item.quantity < 3 -> "Low Stock"
+                                else -> "Good"
+                            }
                             InventoryItemCard(
                                 name = item.foodName,
                                 type = item.foodType,
                                 quantity = "${item.quantity} Bags",
                                 expiry = item.expiredDate,
-                                status = item.status,
+                                status = displayStatus,
                                 onClick = {
                                     selectedItem = item
                                     showBottomSheet = true
@@ -290,13 +302,18 @@ fun InventorySummaryCard(
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(label, fontSize = 12.sp, color = Color.Gray)
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(label, fontSize = 11.sp, color = Color.Gray)
             }
-            Text(value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = if (value != "0" && color == Color(0xFFFF5722)) color else Color.Black)
+            Text(
+                value, 
+                fontSize = 20.sp, 
+                fontWeight = FontWeight.Bold, 
+                color = if (value != "0" && (color == Color(0xFFFFA000) || color == Color(0xFFD32F2F))) color else Color.Black
+            )
         }
     }
 }
@@ -346,14 +363,14 @@ fun InventoryItemCard(
                 
                 val statusColor = when (status.lowercase()) {
                     "good" -> Color(0xFFE8F5E9)
-                    "low" -> Color(0xFFFFF8E1)
-                    "expired" -> Color(0xFFFFEBEE)
+                    "low stock" -> Color(0xFFFFF8E1)
+                    "out of stock", "expired" -> Color(0xFFFFEBEE)
                     else -> Color(0xFFF5F5F5)
                 }
                 val statusTextColor = when (status.lowercase()) {
                     "good" -> Color(0xFF00C853)
-                    "low" -> Color(0xFFFFA000)
-                    "expired" -> Color(0xFFD32F2F)
+                    "low stock" -> Color(0xFFFFA000)
+                    "out of stock", "expired" -> Color(0xFFD32F2F)
                     else -> Color(0xFF757575)
                 }
                 

@@ -63,11 +63,15 @@ fun InventoryDetailContent(
                 )
             }
             
-            val effectiveStatus = if (item.quantity == 0) "Out of Stock" else item.status
-            val (statusColor, statusTextColor) = when (effectiveStatus.lowercase()) {
-                "good" -> Color(0xFFE8F5E9) to Color(0xFF00C853)
-                "low" -> Color(0xFFFFF8E1) to Color(0xFFFFA000)
-                "out of stock", "expired" -> Color(0xFFFFEBEE) to Color(0xFFD32F2F)
+            val effectiveStatus = when {
+                item.quantity == 0 -> "Out of Stock"
+                item.quantity < 3 -> "Low Stock"
+                else -> "Good"
+            }
+            val (statusColor, statusTextColor) = when (effectiveStatus) {
+                "Good" -> Color(0xFFE8F5E9) to Color(0xFF00C853)
+                "Low Stock" -> Color(0xFFFFF8E1) to Color(0xFFFFA000)
+                "Out of Stock" -> Color(0xFFFFEBEE) to Color(0xFFD32F2F)
                 else -> Color(0xFFF5F5F5) to Color(0xFF757575)
             }
 
@@ -76,7 +80,7 @@ fun InventoryDetailContent(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(
-                    text = effectiveStatus.replaceFirstChar { it.uppercase() },
+                    text = effectiveStatus,
                     color = statusTextColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
@@ -86,12 +90,13 @@ fun InventoryDetailContent(
         }
 
         // Add a warning message if low or out of stock
-        if (item.quantity == 0 || item.status.lowercase() == "low") {
+        if (item.quantity < 3) {
             Spacer(modifier = Modifier.height(16.dp))
+            val isOutOfStock = item.quantity == 0
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (item.quantity == 0) Color(0xFFFFEBEE) else Color(0xFFFFF8E1)
+                    containerColor = if (isOutOfStock) Color(0xFFFFEBEE) else Color(0xFFFFF8E1)
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -102,14 +107,14 @@ fun InventoryDetailContent(
                     Icon(
                         imageVector = Icons.Default.Warning,
                         contentDescription = null,
-                        tint = if (item.quantity == 0) Color(0xFFD32F2F) else Color(0xFFFFA000),
+                        tint = if (isOutOfStock) Color(0xFFD32F2F) else Color(0xFFFFA000),
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = if (item.quantity == 0) "This item is currently out of stock!" else "Low stock warning: Please restock soon.",
+                        text = if (isOutOfStock) "This item is currently out of stock!" else "Low stock warning: Please restock soon.",
                         fontSize = 14.sp,
-                        color = if (item.quantity == 0) Color(0xFFD32F2F) else Color(0xFFFFA000),
+                        color = if (isOutOfStock) Color(0xFFD32F2F) else Color(0xFFFFA000),
                         fontWeight = FontWeight.Medium
                     )
                 }

@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -18,12 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.autofeedmobile.network.InventoryData
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.ScheduleData
+import com.example.autofeedmobile.network.ReportData
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -42,6 +41,7 @@ fun DashboardScreen(
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
     var inventoryList by remember { mutableStateOf<List<InventoryData>>(emptyList()) }
+    var reports by remember { mutableStateOf<List<ReportData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
@@ -69,6 +69,12 @@ fun DashboardScreen(
                 val inventoryResponse = RetrofitClient.instance.getInventory()
                 if (inventoryResponse.isSuccessful) {
                     inventoryList = inventoryResponse.body()?.data ?: emptyList()
+                }
+
+                // Fetch Reports for Summary
+                val reportResponse = RetrofitClient.instance.getReports(userId)
+                if (reportResponse.isSuccessful) {
+                    reports = reportResponse.body()?.data ?: emptyList()
                 }
             } catch (e: Exception) {
                 // handle error
@@ -207,19 +213,19 @@ fun DashboardScreen(
             ) {
                 // Summary Cards Grid
                 item {
-                    val lowStockCount = inventoryList.count { it.status.lowercase() == "low" }
+                    val criticalStockCount = inventoryList.count { it.quantity < 3 }
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SummaryCard(
-                                modifier = Modifier.weight(1f),
-                                icon = Icons.Default.Pets,
+                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToReports),
+                                icon = Icons.Default.Assessment,
                                 iconContainerColor = Color(0xFF1DB954).copy(alpha = 0.1f),
                                 iconColor = Color(0xFF1DB954),
-                                value = "32",
-                                label = "My Chickens"
+                                value = "${reports.size}",
+                                label = "My Reports"
                             )
                             SummaryCard(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToInventory),
                                 icon = Icons.Default.Inventory2,
                                 iconContainerColor = Color(0xFF2196F3).copy(alpha = 0.1f),
                                 iconColor = Color(0xFF2196F3),
@@ -229,7 +235,7 @@ fun DashboardScreen(
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SummaryCard(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToSchedule),
                                 icon = Icons.Default.ElectricBolt,
                                 iconContainerColor = Color(0xFF9C27B0).copy(alpha = 0.1f),
                                 iconColor = Color(0xFF9C27B0),
@@ -237,12 +243,12 @@ fun DashboardScreen(
                                 label = "Today Schedules"
                             )
                             SummaryCard(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToInventory),
                                 icon = Icons.Default.Warning,
                                 iconContainerColor = Color(0xFFFF5722).copy(alpha = 0.1f),
                                 iconColor = Color(0xFFFF5722),
-                                value = "$lowStockCount",
-                                label = "Low Stock"
+                                value = "$criticalStockCount",
+                                label = "Low/No Stock"
                             )
                         }
                     }
@@ -250,29 +256,24 @@ fun DashboardScreen(
 
                 // Alerts Section
                 item {
-                    val lowStockItems = inventoryList.filter { it.status.lowercase() == "low" }
-                    if (lowStockItems.isNotEmpty()) {
+                    val outOfStockItems = inventoryList.filter { it.quantity == 0 }
+                    val lowStockItems = inventoryList.filter { it.quantity in 1..2 }
+                    val combinedAlerts = (outOfStockItems + lowStockItems).take(3)
+                    
+                    if (combinedAlerts.isNotEmpty()) {
                         Column {
                             Text("Alerts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                             Spacer(modifier = Modifier.height(8.dp))
-                            lowStockItems.take(2).forEach { item ->
+                            combinedAlerts.forEach { item ->
+                                val isOutOfStock = item.quantity == 0
                                 AlertItem(
-                                    title = "Low Stock",
-                                    message = "${item.foodName} below minimum",
+                                    title = if (isOutOfStock) "Out of Stock" else "Low Stock",
+                                    message = if (isOutOfStock) "${item.foodName} is empty" else "${item.foodName} below minimum (< 3)",
                                     color = Color(0xFFFFEBEE),
                                     indicatorColor = Color.Red,
                                     onClick = onNavigateToInventory
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                            }
-                            // Original placeholder if needed or additional logic
-                            if (lowStockItems.size < 2) {
-                                AlertItem(
-                                    title = "Temperature",
-                                    message = "Cage B-02 temperature above normal",
-                                    color = Color(0xFFFFF8E1),
-                                    indicatorColor = Color(0xFFFFA000)
-                                )
                             }
                         }
                     } else {
@@ -312,7 +313,7 @@ fun DashboardScreen(
                                     CircularProgressIndicator(color = Color(0xFF00897B))
                                 }
                             } else if (schedules.isEmpty()) {
-                                Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                                Box(modifier = Modifier.fillMaxWidth().height(100.dp).padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
                                     Text("No schedules today", color = Color.Gray)
                                 }
                             } else {
