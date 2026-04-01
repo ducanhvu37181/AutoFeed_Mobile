@@ -268,7 +268,7 @@ fun DashboardScreen(
                                 val isOutOfStock = item.quantity == 0
                                 AlertItem(
                                     title = if (isOutOfStock) "Out of Stock" else "Low Stock",
-                                    message = if (isOutOfStock) "${item.foodName} is empty" else "${item.foodName} below minimum (< 3)",
+                                    message = if (isOutOfStock) "${item.foodName} is empty" else "${item.foodName} below minimum",
                                     color = Color(0xFFFFEBEE),
                                     indicatorColor = Color.Red,
                                     onClick = onNavigateToInventory

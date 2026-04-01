@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
@@ -45,8 +46,10 @@ fun ReportScreen(
     // Detail state
     var selectedReportDetail by remember { mutableStateOf<ReportData?>(null) }
     var showDetailBottomSheet by remember { mutableStateOf(false) }
+    var showCreateBottomSheet by remember { mutableStateOf(false) }
     
     val detailSheetState = rememberModalBottomSheetState()
+    val createSheetState = rememberModalBottomSheetState()
 
     fun fetchReports() {
         isLoading = true
@@ -55,6 +58,7 @@ fun ReportScreen(
                 val response = RetrofitClient.instance.getReports(userId)
                 if (response.isSuccessful) {
                     reports = response.body()?.data ?: emptyList()
+                    errorMessage = null
                 } else {
                     errorMessage = "Failed to load reports"
                 }
@@ -161,6 +165,16 @@ fun ReportScreen(
                     onClick = {}
                 )
             }
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showCreateBottomSheet = true },
+                containerColor = Color(0xFF00897B),
+                contentColor = Color.White,
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Report")
+            }
         }
     ) { innerPadding ->
         Column(
@@ -193,8 +207,10 @@ fun ReportScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(reports) { report ->
-                        ReportItem(
-                            report = report,
+                        ReportItemCard(
+                            type = report.type,
+                            date = report.createDate.split("T")[0],
+                            status = report.status,
                             onClick = {
                                 selectedReportDetail = report
                                 showDetailBottomSheet = true
@@ -208,72 +224,89 @@ fun ReportScreen(
 
     if (showDetailBottomSheet && selectedReportDetail != null) {
         ModalBottomSheet(
-            onDismissRequest = { showDetailBottomSheet = false },
+            onDismissRequest = { 
+                showDetailBottomSheet = false 
+                selectedReportDetail = null
+            },
             sheetState = detailSheetState,
-            containerColor = Color.White
+            containerColor = Color.White,
+            dragHandle = null
         ) {
-            // Placeholder for report detail content
-            Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                Text(text = "Report Detail", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "ID: ${selectedReportDetail!!.reportId}")
-                Text(text = "Type: ${selectedReportDetail!!.type}")
-                Text(text = "Date: ${selectedReportDetail!!.createDate}")
-                Text(text = "Description: ${selectedReportDetail!!.description}")
-                Spacer(modifier = Modifier.height(32.dp))
-            }
+            ReportDetailContent(report = selectedReportDetail!!)
+        }
+    }
+
+    if (showCreateBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showCreateBottomSheet = false },
+            sheetState = createSheetState,
+            containerColor = Color.White,
+            dragHandle = null
+        ) {
+            SendReportContent(
+                userId = userId,
+                onSuccess = {
+                    showCreateBottomSheet = false
+                    fetchReports()
+                },
+                onCancel = { showCreateBottomSheet = false }
+            )
         }
     }
 }
 
 @Composable
-fun ReportItem(
-    report: ReportData,
+fun ReportItemCard(
+    type: String,
+    date: String,
+    status: String,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF00897B).copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.Assessment,
-                    contentDescription = null,
-                    tint = Color(0xFF00897B)
-                )
+                Column {
+                    Text(type, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(date, fontSize = 12.sp, color = Color.Gray)
+                }
+                
+                val statusColor = when (status.lowercase()) {
+                    "pending" -> Color(0xFFFFF8E1)
+                    "completed", "approved" -> Color(0xFFE8F5E9)
+                    "rejected" -> Color(0xFFFFEBEE)
+                    else -> Color(0xFFF5F5F5)
+                }
+                val statusTextColor = when (status.lowercase()) {
+                    "pending" -> Color(0xFFFFA000)
+                    "completed", "approved" -> Color(0xFF00C853)
+                    "rejected" -> Color(0xFFD32F2F)
+                    else -> Color(0xFF757575)
+                }
+
+                Surface(
+                    color = statusColor,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = status.replaceFirstChar { it.uppercase() },
+                        color = statusTextColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Report #${report.reportId}",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                Text(
-                    text = "Date: ${report.createDate}",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
-            }
-            
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.LightGray)
         }
     }
 }

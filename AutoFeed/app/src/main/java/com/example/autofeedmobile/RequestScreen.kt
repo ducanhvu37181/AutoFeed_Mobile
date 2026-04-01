@@ -51,6 +51,7 @@ fun RequestScreen(
     var showCreateBottomSheet by remember { mutableStateOf(false) }
 
     val detailSheetState = rememberModalBottomSheetState()
+    val createSheetState = rememberModalBottomSheetState()
 
     fun fetchRequests() {
         isLoading = true
@@ -176,7 +177,7 @@ fun RequestScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* showCreateBottomSheet = true */ },
+                onClick = { showCreateBottomSheet = true },
                 containerColor = Color(0xFF00897B),
                 contentColor = Color.White,
                 shape = CircleShape
@@ -296,17 +297,37 @@ fun RequestScreen(
         ModalBottomSheet(
             onDismissRequest = { showDetailBottomSheet = false },
             sheetState = detailSheetState,
-            containerColor = Color.White
+            containerColor = Color.White,
+            dragHandle = null
         ) {
             val task = RequestTask(
                 id = "REQ${selectedRequestDetail!!.requestId}",
                 title = selectedRequestDetail!!.type,
                 status = selectedRequestDetail!!.status,
                 type = selectedRequestDetail!!.type,
-                createDate = selectedRequestDetail!!.createdAt,
+                createDate = selectedRequestDetail!!.createdAt.split("T")[0], // Keep only Date
                 description = selectedRequestDetail!!.description
             )
             RequestDetailContent(request = task)
+        }
+    }
+
+    // Create Bottom Sheet
+    if (showCreateBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showCreateBottomSheet = false },
+            sheetState = createSheetState,
+            containerColor = Color.White,
+            dragHandle = null
+        ) {
+            SendRequestContent(
+                userId = userId,
+                onSuccess = {
+                    showCreateBottomSheet = false
+                    fetchRequests()
+                },
+                onCancel = { showCreateBottomSheet = false }
+            )
         }
     }
 }
