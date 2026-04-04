@@ -4,7 +4,23 @@ data class UserResponse(
     val userId: Int,
     val username: String,
     val fullName: String,
+    val email: String,
+    val phone: String,
+    val avatarUrl: String?,
     val roleId: Int
+)
+
+data class UserProfileResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: UserResponse,
+    val description: String
+)
+
+data class UpdateProfileDto(
+    val fullName: String,
+    val email: String,
+    val phone: String
 )
 
 data class LoginResponse(
@@ -83,5 +99,29 @@ data class InventoryListResponse(
     val status: Boolean,
     val httpCode: Int,
     val data: List<InventoryData>,
+    val description: String
+)
+
+data class ReportData(
+    val reportId: Int,
+    val userId: Int,
+    val userName: String,
+    val userRole: String?,
+    val type: String,
+    val description: String,
+    val status: String,
+    val createDate: String
+)
+
+data class ReportListResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: List<ReportData>?,
+    val description: String
+)
+
+data class CreateReportDto(
+    val userId: Int,
+    val type: String,
     val description: String
 )

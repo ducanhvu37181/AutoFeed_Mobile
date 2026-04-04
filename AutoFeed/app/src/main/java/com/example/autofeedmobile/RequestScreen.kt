@@ -1,24 +1,28 @@
 package com.example.autofeedmobile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.RequestData
 import com.example.autofeedmobile.network.RetrofitClient
 import kotlinx.coroutines.launch
@@ -28,10 +32,12 @@ import kotlinx.coroutines.launch
 fun RequestScreen(
     userId: Int,
     userFullName: String,
+    userAvatarUrl: String? = null,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
-    onNavigateToSchedule: () -> Unit = {}
+    onNavigateToSchedule: () -> Unit = {},
+    onBackToProfile: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -44,10 +50,10 @@ fun RequestScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Detail state
-    var selectedRequestDetail by remember { mutableStateOf<RequestTask?>(null) }
+    var selectedRequestDetail by remember { mutableStateOf<RequestData?>(null) }
     var showDetailBottomSheet by remember { mutableStateOf(false) }
     var showCreateBottomSheet by remember { mutableStateOf(false) }
-    
+
     val detailSheetState = rememberModalBottomSheetState()
     val createSheetState = rememberModalBottomSheetState()
 
@@ -90,13 +96,38 @@ fun RequestScreen(
                         Text("My Requests", color = Color.White, fontSize = 14.sp)
                     }
                 },
+                navigationIcon = {
+                    IconButton(onClick = onBackToProfile) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Profile", tint = Color.White)
+                    }
+                },
                 actions = {
                     IconButton(onClick = { }) {
                         Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = userAvatarUrl,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -160,10 +191,10 @@ fun RequestScreen(
                     onClick = onNavigateToSchedule
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Requests") },
-                    label = { Text("Requests") },
-                    selected = true,
-                    onClick = {}
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    label = { Text("Profile") },
+                    selected = false,
+                    onClick = onBackToProfile
                 )
             }
         },
@@ -202,148 +233,125 @@ fun RequestScreen(
                     modifier = Modifier.weight(1f), 
                     label = "Approved", 
                     value = requests.count { it.status.equals("Approved", ignoreCase = true) }.toString(), 
-                    valueColor = Color(0xFF00C853)
+                    valueColor = Color(0xFF43A047)
                 )
             }
 
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+            // Search and Filter
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                placeholder = { Text("Search requests...", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-                shape = RoundedCornerShape(24.dp),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.White,
-                    focusedContainerColor = Color.White,
-                    unfocusedBorderColor = Color.LightGray,
-                    focusedBorderColor = Color(0xFF00897B)
-                )
-            )
-
-            // Filters
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                items(filters) { filter ->
-                    FilterChip(
-                        selected = selectedFilter == filter,
-                        onClick = { selectedFilter = filter },
-                        label = { Text(filter) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF00897B),
-                            selectedLabelColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(20.dp)
+                Column(modifier = Modifier.padding(16.dp)) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search requests...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
                     )
-                }
-            }
-
-            // Request List
-            Box(modifier = Modifier.fillMaxSize()) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF00897B))
-                } else if (errorMessage != null) {
-                    Text(errorMessage!!, modifier = Modifier.align(Alignment.Center), color = Color.Red)
-                } else if (filteredRequests.isEmpty()) {
-                    Text("No requests found", modifier = Modifier.align(Alignment.Center), color = Color.Gray)
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 80.dp)
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    ScrollableTabRow(
+                        selectedTabIndex = filters.indexOf(selectedFilter),
+                        edgePadding = 0.dp,
+                        containerColor = Color.Transparent,
+                        divider = {},
+                        indicator = {}
                     ) {
-                        items(filteredRequests) { request ->
-                            val statusInfo = getStatusInfo(request.status)
-                            val reqIdStr = "REQ${request.requestId.toString().padStart(3, '0')}"
-                            RequestItemCard(
-                                id = reqIdStr,
-                                type = request.type,
-                                description = request.description,
-                                date = formatCreatedAt(request.createdAt),
-                                status = request.status.replaceFirstChar { it.uppercase() },
-                                statusColor = statusInfo.first,
-                                statusTextColor = statusInfo.second,
-                                onClick = {
-                                    selectedRequestDetail = RequestTask(
-                                        id = reqIdStr,
-                                        title = request.type,
-                                        status = request.status.replaceFirstChar { it.uppercase() },
-                                        type = request.type,
-                                        createDate = formatCreatedAt(request.createdAt),
-                                        description = request.description
-                                    )
-                                    showDetailBottomSheet = true
-                                }
+                        filters.forEach { filter ->
+                            FilterChip(
+                                selected = selectedFilter == filter,
+                                onClick = { selectedFilter = filter },
+                                label = { Text(filter) },
+                                modifier = Modifier.padding(end = 8.dp)
                             )
                         }
                     }
                 }
             }
-        }
 
-        // Bottom Sheet for Detail View
-        if (showDetailBottomSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { 
-                    showDetailBottomSheet = false 
-                    selectedRequestDetail = null
-                },
-                sheetState = detailSheetState,
-                containerColor = Color.White,
-                dragHandle = null
-            ) {
-                if (selectedRequestDetail != null) {
-                    RequestDetailContent(request = selectedRequestDetail!!)
+            // Request List
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF00897B))
+                }
+            } else if (errorMessage != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(errorMessage!!, color = Color.Red)
+                        Button(onClick = { fetchRequests() }, modifier = Modifier.padding(top = 8.dp)) {
+                            Text("Retry")
+                        }
+                    }
+                }
+            } else if (filteredRequests.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No requests found", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(filteredRequests) { request ->
+                        RequestItem(
+                            request = request,
+                            onClick = {
+                                selectedRequestDetail = request
+                                showDetailBottomSheet = true
+                            }
+                        )
+                    }
                 }
             }
         }
+    }
 
-        // Bottom Sheet for Send Request
-        if (showCreateBottomSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showCreateBottomSheet = false },
-                sheetState = createSheetState,
-                containerColor = Color.White,
-                dragHandle = null
-            ) {
-                SendRequestContent(
-                    userId = userId,
-                    onSuccess = {
-                        showCreateBottomSheet = false
-                        fetchRequests() // Refresh list
-                    },
-                    onCancel = { showCreateBottomSheet = false }
-                )
-            }
+    // Detail Bottom Sheet
+    if (showDetailBottomSheet && selectedRequestDetail != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showDetailBottomSheet = false },
+            sheetState = detailSheetState,
+            containerColor = Color.White,
+            dragHandle = null
+        ) {
+            val task = RequestTask(
+                id = "REQ${selectedRequestDetail!!.requestId}",
+                title = selectedRequestDetail!!.type,
+                status = selectedRequestDetail!!.status,
+                type = selectedRequestDetail!!.type,
+                createDate = selectedRequestDetail!!.createdAt.split("T")[0], // Keep only Date
+                description = selectedRequestDetail!!.description
+            )
+            RequestDetailContent(request = task)
         }
     }
-}
 
-fun formatCreatedAt(createdAt: String): String {
-    return try {
-        // "2026-03-27T00:05:17.853" -> "2026-03-27"
-        createdAt.split("T")[0]
-    } catch (e: Exception) {
-        createdAt
-    }
-}
-
-fun getStatusInfo(status: String): Pair<Color, Color> {
-    return when (status.lowercase()) {
-        "pending" -> Pair(Color(0xFFFFF8E1), Color(0xFFFFA000))
-        "approved" -> Pair(Color(0xFFE8F5E9), Color(0xFF00C853))
-        "rejected" -> Pair(Color(0xFFFFEBEE), Color(0xFFD32F2F))
-        else -> Pair(Color(0xFFF5F5F5), Color(0xFF757575))
+    // Create Bottom Sheet
+    if (showCreateBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showCreateBottomSheet = false },
+            sheetState = createSheetState,
+            containerColor = Color.White,
+            dragHandle = null
+        ) {
+            SendRequestContent(
+                userId = userId,
+                onSuccess = {
+                    showCreateBottomSheet = false
+                    fetchRequests()
+                },
+                onCancel = { showCreateBottomSheet = false }
+            )
+        }
     }
 }
 
@@ -357,75 +365,115 @@ fun RequestSummaryCard(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(label, fontSize = 12.sp, color = Color.Gray)
-            Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = valueColor)
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = label, fontSize = 12.sp, color = Color.Gray)
+            Text(
+                text = value,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = valueColor
+            )
         }
     }
 }
 
 @Composable
-fun RequestItemCard(
-    id: String,
-    type: String,
-    description: String,
-    date: String,
-    status: String,
-    statusColor: Color,
-    statusTextColor: Color,
-    onClick: () -> Unit = {}
+fun RequestItem(
+    request: RequestData,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        onClick = onClick
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(getRequestColor(request.type).copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
             ) {
-                Text(id, fontSize = 12.sp, color = Color.Gray)
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                Icon(
+                    getRequestIcon(request.type),
+                    contentDescription = null,
+                    tint = getRequestColor(request.type)
+                )
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(type, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text(description, fontSize = 14.sp, color = Color(0xFF455A64))
+            Spacer(modifier = Modifier.width(16.dp))
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(date, fontSize = 12.sp, color = Color.Gray)
-                Surface(
-                    color = statusColor,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        status,
-                        color = statusTextColor,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = request.type,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = request.description,
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    maxLines = 1
+                )
             }
+            
+            StatusChip(status = request.status)
         }
     }
+}
+
+@Composable
+fun StatusChip(status: String) {
+    val (backgroundColor, textColor) = when (status.lowercase()) {
+        "approved" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+        "pending" -> Color(0xFFFFF8E1) to Color(0xFFF57C00)
+        "rejected" -> Color(0xFFFFEBEE) to Color(0xFFC62828)
+        else -> Color(0xFFF5F5F5) to Color(0xFF616161)
+    }
+    
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Text(
+            text = status,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = textColor
+        )
+    }
+}
+
+fun getRequestIcon(type: String) = when (type.lowercase()) {
+    "feed" -> Icons.Default.Pets
+    "maintenance" -> Icons.Default.Build
+    "medical" -> Icons.Default.MedicalServices
+    else -> Icons.Default.Description
+}
+
+fun getRequestColor(type: String) = when (type.lowercase()) {
+    "feed" -> Color(0xFF4CAF50)
+    "maintenance" -> Color(0xFF2196F3)
+    "medical" -> Color(0xFFF44336)
+    else -> Color(0xFF9C27B0)
 }
 
 @Preview(showBackground = true)
 @Composable
 fun RequestScreenPreview() {
-    RequestScreen(userId = 1, userFullName = "John Farmer")
+    RequestScreen(userId = 1, userFullName = "John Doe")
 }

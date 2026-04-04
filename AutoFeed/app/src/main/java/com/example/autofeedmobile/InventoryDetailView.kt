@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -62,17 +63,16 @@ fun InventoryDetailContent(
                 )
             }
             
-            val statusColor = when (item.status.lowercase()) {
-                "good" -> Color(0xFFE8F5E9)
-                "low" -> Color(0xFFFFF8E1)
-                "expired" -> Color(0xFFFFEBEE)
-                else -> Color(0xFFF5F5F5)
+            val effectiveStatus = when {
+                item.quantity == 0 -> "Out of Stock"
+                item.quantity < 3 -> "Low Stock"
+                else -> "Good"
             }
-            val statusTextColor = when (item.status.lowercase()) {
-                "good" -> Color(0xFF00C853)
-                "low" -> Color(0xFFFFA000)
-                "expired" -> Color(0xFFD32F2F)
-                else -> Color(0xFF757575)
+            val (statusColor, statusTextColor) = when (effectiveStatus) {
+                "Good" -> Color(0xFFE8F5E9) to Color(0xFF00C853)
+                "Low Stock" -> Color(0xFFFFF8E1) to Color(0xFFFFA000)
+                "Out of Stock" -> Color(0xFFFFEBEE) to Color(0xFFD32F2F)
+                else -> Color(0xFFF5F5F5) to Color(0xFF757575)
             }
 
             Surface(
@@ -80,12 +80,44 @@ fun InventoryDetailContent(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(
-                    text = item.status.replaceFirstChar { it.uppercase() },
+                    text = effectiveStatus,
                     color = statusTextColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
+            }
+        }
+
+        // Add a warning message if low or out of stock
+        if (item.quantity < 3) {
+            Spacer(modifier = Modifier.height(16.dp))
+            val isOutOfStock = item.quantity == 0
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isOutOfStock) Color(0xFFFFEBEE) else Color(0xFFFFF8E1)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = if (isOutOfStock) Color(0xFFD32F2F) else Color(0xFFFFA000),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (isOutOfStock) "This item is currently out of stock!" else "Low stock warning: Please restock soon.",
+                        fontSize = 14.sp,
+                        color = if (isOutOfStock) Color(0xFFD32F2F) else Color(0xFFFFA000),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
 
