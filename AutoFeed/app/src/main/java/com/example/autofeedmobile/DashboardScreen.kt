@@ -16,9 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.InventoryData
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.ScheduleData
@@ -32,11 +35,12 @@ import java.util.*
 fun DashboardScreen(
     userId: Int,
     userFullName: String,
+    userAvatarUrl: String? = null,
     onLogout: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
-    onNavigateToRequests: () -> Unit = {},
-    onNavigateToReports: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToAlerts: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
@@ -123,9 +127,32 @@ fun DashboardScreen(
                                 .offset(x = (-8).dp, y = 8.dp)
                         )
                     }
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = userAvatarUrl,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                onError = { error ->
+                                    android.util.Log.e("Coil", "Dashboard Avatar Load Error: ${error.result.throwable.message}")
+                                }
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -189,16 +216,10 @@ fun DashboardScreen(
                     onClick = onNavigateToSchedule
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Requests") },
-                    label = { Text("Requests") },
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    label = { Text("Profile") },
                     selected = false,
-                    onClick = onNavigateToRequests
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Assessment, contentDescription = "Reports") },
-                    label = { Text("Reports") },
-                    selected = false,
-                    onClick = onNavigateToReports
+                    onClick = onNavigateToProfile
                 )
             }
         }
@@ -217,7 +238,7 @@ fun DashboardScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SummaryCard(
-                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToReports),
+                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToProfile),
                                 icon = Icons.Default.Assessment,
                                 iconContainerColor = Color(0xFF1DB954).copy(alpha = 0.1f),
                                 iconColor = Color(0xFF1DB954),
@@ -258,13 +279,24 @@ fun DashboardScreen(
                 item {
                     val outOfStockItems = inventoryList.filter { it.quantity == 0 }
                     val lowStockItems = inventoryList.filter { it.quantity in 1..2 }
-                    val combinedAlerts = (outOfStockItems + lowStockItems).take(3)
+                    val combinedAlerts = (outOfStockItems + lowStockItems)
                     
                     if (combinedAlerts.isNotEmpty()) {
                         Column {
-                            Text("Alerts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Alerts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                if (combinedAlerts.size > 3) {
+                                    TextButton(onClick = onNavigateToAlerts) {
+                                        Text("View All", color = Color(0xFF00897B))
+                                    }
+                                }
+                            }
                             Spacer(modifier = Modifier.height(8.dp))
-                            combinedAlerts.forEach { item ->
+                            combinedAlerts.take(3).forEach { item ->
                                 val isOutOfStock = item.quantity == 0
                                 AlertItem(
                                     title = if (isOutOfStock) "Out of Stock" else "Low Stock",

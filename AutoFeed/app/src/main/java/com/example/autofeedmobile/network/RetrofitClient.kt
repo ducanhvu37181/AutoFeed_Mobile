@@ -15,7 +15,19 @@ object RetrofitClient {
      * For Physical Device (with 'adb reverse tcp:5123 tcp:5123'): Use "http://localhost:5123/"
      * For Physical Device (Wi-Fi): Use your machine's IP, e.g., "http://192.168.1.235:5123/"
      */
-    private const val BASE_URL = "https://10.0.2.2:7132/"
+    const val BASE_URL = "https://10.0.2.2:7132/"
+
+    fun getFullUrl(url: String?): String? {
+        if (url.isNullOrEmpty()) return null
+        val result = if (url.startsWith("http")) {
+            url
+        } else {
+            val cleanUrl = if (url.startsWith("/")) url.substring(1) else url
+            "$BASE_URL$cleanUrl"
+        }
+        android.util.Log.d("RetrofitClient", "Normalizing URL: $url -> $result")
+        return result
+    }
 
     val instance: ApiService by lazy {
         val retrofit = Retrofit.Builder()
@@ -27,7 +39,7 @@ object RetrofitClient {
         retrofit.create(ApiService::class.java)
     }
 
-    private fun getUnsafeOkHttpClient(): OkHttpClient {
+    fun getUnsafeOkHttpClient(): OkHttpClient {
         try {
             val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
                 override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}

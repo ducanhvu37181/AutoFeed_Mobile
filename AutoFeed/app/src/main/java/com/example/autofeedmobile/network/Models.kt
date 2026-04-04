@@ -4,7 +4,23 @@ data class UserResponse(
     val userId: Int,
     val username: String,
     val fullName: String,
+    val email: String,
+    val phone: String,
+    val avatarUrl: String?,
     val roleId: Int
+)
+
+data class UserProfileResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: UserResponse,
+    val description: String
+)
+
+data class UpdateProfileDto(
+    val fullName: String,
+    val email: String,
+    val phone: String
 )
 
 data class LoginResponse(

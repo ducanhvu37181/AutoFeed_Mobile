@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,10 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.ReportData
 import com.example.autofeedmobile.network.RetrofitClient
 import kotlinx.coroutines.launch
@@ -29,12 +32,12 @@ import kotlinx.coroutines.launch
 fun ReportScreen(
     userId: Int,
     userFullName: String,
+    userAvatarUrl: String? = null,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
-    onNavigateToRequests: () -> Unit = {},
-    onNavigateToReports: () -> Unit = {}
+    onBackToProfile: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
@@ -83,13 +86,38 @@ fun ReportScreen(
                         Text("My Reports", color = Color.White, fontSize = 14.sp)
                     }
                 },
+                navigationIcon = {
+                    IconButton(onClick = onBackToProfile) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Profile", tint = Color.White)
+                    }
+                },
                 actions = {
                     IconButton(onClick = { }) {
                         Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = userAvatarUrl,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -153,16 +181,10 @@ fun ReportScreen(
                     onClick = onNavigateToSchedule
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Requests") },
-                    label = { Text("Requests") },
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    label = { Text("Profile") },
                     selected = false,
-                    onClick = onNavigateToRequests
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Assessment, contentDescription = "Reports") },
-                    label = { Text("Reports") },
-                    selected = true,
-                    onClick = {}
+                    onClick = onBackToProfile
                 )
             }
         },
@@ -314,5 +336,5 @@ fun ReportItemCard(
 @Preview(showBackground = true)
 @Composable
 fun ReportScreenPreview() {
-    ReportScreen(userId = 1, userFullName = "John Doe")
+    ReportScreen(userId = 1, userFullName = "John Doe", userAvatarUrl = null)
 }

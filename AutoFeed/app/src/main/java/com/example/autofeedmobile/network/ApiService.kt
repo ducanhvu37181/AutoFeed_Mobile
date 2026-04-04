@@ -1,12 +1,8 @@
 package com.example.autofeedmobile.network
 
+import okhttp3.MultipartBody
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.PATCH
-import retrofit2.http.POST
-import retrofit2.http.Path
-import retrofit2.http.Query
+import retrofit2.http.*
 
 interface ApiService {
     @POST("api/Auth/login")
@@ -50,4 +46,20 @@ interface ApiService {
 
     @POST("api/Report")
     suspend fun createReport(@Body report: CreateReportDto): Response<Unit>
+
+    @GET("api/User/{id}")
+    suspend fun getUserProfile(@Path("id") id: Int): Response<UserProfileResponse>
+
+    @PATCH("api/User/{id}")
+    suspend fun updateProfile(
+        @Path("id") id: Int,
+        @Body profile: UpdateProfileDto
+    ): Response<Unit>
+
+    @Multipart
+    @POST("api/User/{id}/avatar")
+    suspend fun updateAvatar(
+        @Path("id") id: Int,
+        @Part file: MultipartBody.Part
+    ): Response<Unit>
 }
