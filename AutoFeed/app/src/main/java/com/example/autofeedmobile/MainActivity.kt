@@ -53,7 +53,8 @@ class MainActivity : ComponentActivity() {
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
-                            onNavigateToProfile = { currentScreen = Screen.Profile }
+                            onNavigateToProfile = { currentScreen = Screen.Profile },
+                            onNavigateToAlerts = { currentScreen = Screen.Alerts }
                         )
                     }
                     Screen.Schedule -> {
@@ -64,7 +65,8 @@ class MainActivity : ComponentActivity() {
                             onLogout = { currentScreen = Screen.Login },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
-                            onNavigateToProfile = { currentScreen = Screen.Profile }
+                            onNavigateToProfile = { currentScreen = Screen.Profile },
+                            onNavigateToAlerts = { currentScreen = Screen.Alerts }
                         )
                     }
                     Screen.Requests -> {
@@ -76,7 +78,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
-                            onBackToProfile = { currentScreen = Screen.Profile }
+                            onBackToProfile = { currentScreen = Screen.Profile },
+                            onNavigateToAlerts = { currentScreen = Screen.Alerts }
                         )
                     }
                     Screen.Reports -> {
@@ -88,7 +91,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
-                            onBackToProfile = { currentScreen = Screen.Profile }
+                            onBackToProfile = { currentScreen = Screen.Profile },
+                            onNavigateToAlerts = { currentScreen = Screen.Alerts }
                         )
                     }
                     Screen.Profile -> {
@@ -101,6 +105,7 @@ class MainActivity : ComponentActivity() {
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToRequests = { currentScreen = Screen.Requests },
                             onNavigateToReports = { currentScreen = Screen.Reports },
+                            onNavigateToAlerts = { currentScreen = Screen.Alerts },
                             onProfileUpdated = { updatedUser ->
                                 userFullName = updatedUser.fullName
                                 userAvatarUrl = RetrofitClient.getFullUrl(updatedUser.avatarUrl)

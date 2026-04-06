@@ -37,14 +37,27 @@ fun ReportScreen(
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
-    onBackToProfile: () -> Unit = {}
+    onBackToProfile: () -> Unit = {},
+    onNavigateToAlerts: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
     var reports by remember { mutableStateOf<List<ReportData>>(emptyList()) }
+    var inventoryList by remember { mutableStateOf<List<com.example.autofeedmobile.network.InventoryData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    var selectedFilter by remember { mutableStateOf("All") }
+    val filters = listOf("All", "Pending", "Approved", "Rejected")
+
+    val filteredReports = remember(reports, selectedFilter) {
+        if (selectedFilter == "All") reports
+        else reports.filter { 
+            it.status.equals(selectedFilter, ignoreCase = true) || 
+            (selectedFilter == "Approved" && it.status.equals("completed", ignoreCase = true))
+        }
+    }
 
     // Detail state
     var selectedReportDetail by remember { mutableStateOf<ReportData?>(null) }
@@ -64,6 +77,12 @@ fun ReportScreen(
                     errorMessage = null
                 } else {
                     errorMessage = "Failed to load reports"
+                }
+
+                // Also fetch inventory for alerts
+                val invResponse = RetrofitClient.instance.getInventory()
+                if (invResponse.isSuccessful) {
+                    inventoryList = invResponse.body()?.data ?: emptyList()
                 }
             } catch (e: Exception) {
                 errorMessage = "Network error: ${e.localizedMessage}"
@@ -92,32 +111,64 @@ fun ReportScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
+                    Box {
+                        IconButton(onClick = onNavigateToAlerts) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = Color.White)
+                        }
+                        if (inventoryList.any { it.quantity < 3 }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color.Red, CircleShape)
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-8).dp, y = 8.dp)
+                            )
+                        }
                     }
-                    Box(
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .clickable { showMenu = true },
-                        contentAlignment = Alignment.Center
+                            .clickable { showMenu = true }
                     ) {
-                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
-                            AsyncImage(
-                                model = userAvatarUrl,
-                                contentDescription = "User Avatar",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text(
+                                text = userFullName,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
-                        } else {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = "Menu",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                            Text(
+                                text = "Farmer",
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 11.sp
                             )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = userAvatarUrl,
+                                    contentDescription = "User Avatar",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = "Menu",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -205,6 +256,28 @@ fun ReportScreen(
                 .fillMaxSize()
                 .background(Color(0xFFF5F5F5))
         ) {
+            // Filter Tabs
+            TabRow(
+                selectedTabIndex = filters.indexOf(selectedFilter),
+                containerColor = Color.White,
+                contentColor = Color(0xFF00897B),
+                divider = {}
+            ) {
+                filters.forEach { filter ->
+                    Tab(
+                        selected = selectedFilter == filter,
+                        onClick = { selectedFilter = filter },
+                        text = { 
+                            Text(
+                                filter, 
+                                fontSize = 13.sp,
+                                fontWeight = if (selectedFilter == filter) FontWeight.Bold else FontWeight.Normal
+                            ) 
+                        }
+                    )
+                }
+            }
+
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFF00897B))
@@ -218,9 +291,12 @@ fun ReportScreen(
                         }
                     }
                 }
-            } else if (reports.isEmpty()) {
+            } else if (filteredReports.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No reports found", color = Color.Gray)
+                    Text(
+                        if (selectedFilter == "All") "No reports found" else "No $selectedFilter reports found", 
+                        color = Color.Gray
+                    )
                 }
             } else {
                 LazyColumn(
@@ -228,7 +304,7 @@ fun ReportScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(reports) { report ->
+                    items(filteredReports) { report ->
                         ReportItemCard(
                             type = report.type,
                             date = report.createDate.split("T")[0],
@@ -320,8 +396,9 @@ fun ReportItemCard(
                     color = statusColor,
                     shape = RoundedCornerShape(12.dp)
                 ) {
+                    val displayStatus = if (status.equals("completed", ignoreCase = true)) "Approved" else status
                     Text(
-                        text = status.replaceFirstChar { it.uppercase() },
+                        text = displayStatus.replaceFirstChar { it.uppercase() },
                         color = statusTextColor,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
