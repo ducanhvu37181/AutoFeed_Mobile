@@ -10,7 +10,7 @@ import com.example.autofeedmobile.network.UserResponse
 import com.example.autofeedmobile.ui.theme.AutoFeedMobileTheme
 
 enum class Screen {
-    Login, Dashboard, Inventory, Schedule, Requests, Reports, Profile, Alerts
+    Login, Dashboard, Inventory, Schedule, Requests, Reports, Profile, Alerts, Settings, ChangePassword, ForgotPassword
 }
 
 class MainActivity : ComponentActivity() {
@@ -26,12 +26,18 @@ class MainActivity : ComponentActivity() {
 
                 when (currentScreen) {
                     Screen.Login -> {
-                        LoginScreen(onLoginSuccess = { user ->
-                            userId = user.userId
-                            userFullName = user.fullName
-                            userAvatarUrl = RetrofitClient.getFullUrl(user.avatarUrl)
-                            currentScreen = Screen.Dashboard
-                        })
+                        LoginScreen(
+                            onLoginSuccess = { user ->
+                                userId = user.userId
+                                userFullName = user.fullName
+                                userAvatarUrl = RetrofitClient.getFullUrl(user.avatarUrl)
+                                currentScreen = Screen.Dashboard
+                            },
+                            onForgotPassword = { currentScreen = Screen.ForgotPassword }
+                        )
+                    }
+                    Screen.ForgotPassword -> {
+                        ForgotPasswordScreen(onBack = { currentScreen = Screen.Login })
                     }
                     Screen.Dashboard -> {
                         DashboardScreen(
@@ -106,10 +112,23 @@ class MainActivity : ComponentActivity() {
                             onNavigateToRequests = { currentScreen = Screen.Requests },
                             onNavigateToReports = { currentScreen = Screen.Reports },
                             onNavigateToAlerts = { currentScreen = Screen.Alerts },
+                            onNavigateToSettings = { currentScreen = Screen.Settings },
                             onProfileUpdated = { updatedUser ->
                                 userFullName = updatedUser.fullName
                                 userAvatarUrl = RetrofitClient.getFullUrl(updatedUser.avatarUrl)
                             }
+                        )
+                    }
+                    Screen.Settings -> {
+                        SettingsScreen(
+                            onBack = { currentScreen = Screen.Profile },
+                            onNavigateToChangePassword = { currentScreen = Screen.ChangePassword }
+                        )
+                    }
+                    Screen.ChangePassword -> {
+                        ChangePasswordScreen(
+                            userId = userId,
+                            onBack = { currentScreen = Screen.Settings }
                         )
                     }
                     Screen.Alerts -> {

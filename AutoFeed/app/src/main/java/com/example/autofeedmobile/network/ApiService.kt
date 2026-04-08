@@ -5,6 +5,9 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface ApiService {
+    @POST("api/User/reset-password")
+    suspend fun forgotPassword(@Body dto: ResetPasswordDto): Response<Unit>
+
     @POST("api/Auth/login")
     suspend fun login(
         @Query("usernameOrEmail") usernameOrEmail: String,
@@ -50,10 +53,16 @@ interface ApiService {
     @GET("api/User/{id}")
     suspend fun getUserProfile(@Path("id") id: Int): Response<UserProfileResponse>
 
-    @PATCH("api/User/{id}")
+    @PUT("api/User/{id}")
     suspend fun updateProfile(
         @Path("id") id: Int,
         @Body profile: UpdateProfileDto
+    ): Response<Unit>
+
+    @PATCH("api/User/{id}/change-password")
+    suspend fun changePassword(
+        @Path("id") id: Int,
+        @Body dto: ChangePasswordDto
     ): Response<Unit>
 
     @Multipart

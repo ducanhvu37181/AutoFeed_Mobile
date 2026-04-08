@@ -47,6 +47,7 @@ fun ProfileScreen(
     onNavigateToRequests: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
     onNavigateToAlerts: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     onProfileUpdated: (UserResponse) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -343,7 +344,7 @@ fun ProfileScreen(
                                 icon = Icons.Default.Settings,
                                 title = "Settings",
                                 subtitle = "App preferences and security",
-                                onClick = {}
+                                onClick = onNavigateToSettings
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                             ProfileMenuItem(
@@ -371,6 +372,8 @@ fun ProfileScreen(
                 initialFullName = userData!!.fullName,
                 initialEmail = userData!!.email,
                 initialPhone = userData!!.phone,
+                username = userData!!.username,
+                roleId = userData!!.roleId,
                 onSuccess = {
                     showEditSheet = false
                     fetchUserData()
@@ -402,6 +405,8 @@ fun EditProfileContent(
     initialFullName: String,
     initialEmail: String,
     initialPhone: String,
+    username: String,
+    roleId: Int,
     onSuccess: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -452,9 +457,26 @@ fun EditProfileContent(
                     isSubmitting = true
                     scope.launch {
                         try {
-                            val response = RetrofitClient.instance.updateProfile(userId, UpdateProfileDto(fullName, email, phone))
-                            if (response.isSuccessful) onSuccess()
-                        } catch (_: Exception) { } finally { isSubmitting = false }
+                            val response = RetrofitClient.instance.updateProfile(
+                                userId,
+                                UpdateProfileDto(
+                                    roleId = roleId,
+                                    email = email,
+                                    fullName = fullName,
+                                    phone = phone,
+                                    username = username
+                                )
+                            )
+                            if (response.isSuccessful) {
+                                onSuccess()
+                            } else {
+                                android.util.Log.e("ProfileScreen", "Update failed: ${response.code()} ${response.message()} ${response.errorBody()?.string()}")
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("ProfileScreen", "Error updating profile", e)
+                        } finally {
+                            isSubmitting = false
+                        }
                     }
                 },
                 modifier = Modifier.weight(1f),
