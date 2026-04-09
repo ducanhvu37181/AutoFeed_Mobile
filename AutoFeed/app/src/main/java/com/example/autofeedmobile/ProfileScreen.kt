@@ -46,11 +46,14 @@ fun ProfileScreen(
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToRequests: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
+    onNavigateToAlerts: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     onProfileUpdated: (UserResponse) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var userData by remember { mutableStateOf<UserResponse?>(null) }
+    var inventoryList by remember { mutableStateOf<List<com.example.autofeedmobile.network.InventoryData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var showEditSheet by remember { mutableStateOf(false) }
     var showAvatarSheet by remember { mutableStateOf(false) }
@@ -59,11 +62,21 @@ fun ProfileScreen(
         isLoading = true
         scope.launch {
             try {
-                val response = RetrofitClient.instance.getUserProfile(userId)
-                if (response.isSuccessful) {
-                    val rawData = response.body()?.data
-                    userData = rawData?.copy(avatarUrl = RetrofitClient.getFullUrl(rawData.avatarUrl))
-                    userData?.let { onProfileUpdated(it) }
+                val profileResponse = RetrofitClient.instance.getUserProfile(userId)
+                if (profileResponse.isSuccessful) {
+                    val rawData = profileResponse.body()?.data
+                    if (rawData != null) {
+                        val fullUrl = RetrofitClient.getFullUrl(rawData.avatarUrl)
+                        // Append timestamp to force Coil to bypass its cache if the URL hasn't changed but the content has.
+                        val updatedUrl = if (fullUrl != null) "$fullUrl?t=${System.currentTimeMillis()}" else null
+                        userData = rawData.copy(avatarUrl = updatedUrl)
+                        userData?.let { onProfileUpdated(it) }
+                    }
+                }
+                
+                val inventoryResponse = RetrofitClient.instance.getInventory()
+                if (inventoryResponse.isSuccessful) {
+                    inventoryList = inventoryResponse.body()?.data ?: emptyList()
                 }
             } catch (_: Exception) {
             } finally {
@@ -86,32 +99,64 @@ fun ProfileScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
+                    Box {
+                        IconButton(onClick = onNavigateToAlerts) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
+                        }
+                        if (inventoryList.any { it.quantity < 3 }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color.Red, CircleShape)
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-8).dp, y = 8.dp)
+                            )
+                        }
                     }
-                    Box(
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .clickable { showMenu = true },
-                        contentAlignment = Alignment.Center
+                            .clickable { showMenu = true }
                     ) {
-                        if (userData?.avatarUrl != null && userData?.avatarUrl!!.isNotEmpty()) {
-                            AsyncImage(
-                                model = userData?.avatarUrl,
-                                contentDescription = "User Avatar",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text(
+                                text = userData?.fullName ?: userFullName,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
-                        } else {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = "Menu",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                            Text(
+                                text = "Farmer",
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 11.sp
                             )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (userData?.avatarUrl != null && userData?.avatarUrl!!.isNotEmpty()) {
+                                AsyncImage(
+                                    model = userData?.avatarUrl,
+                                    contentDescription = "User Avatar",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = "Menu",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -299,7 +344,7 @@ fun ProfileScreen(
                                 icon = Icons.Default.Settings,
                                 title = "Settings",
                                 subtitle = "App preferences and security",
-                                onClick = {}
+                                onClick = onNavigateToSettings
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                             ProfileMenuItem(
@@ -327,6 +372,8 @@ fun ProfileScreen(
                 initialFullName = userData!!.fullName,
                 initialEmail = userData!!.email,
                 initialPhone = userData!!.phone,
+                username = userData!!.username,
+                roleId = userData!!.roleId,
                 onSuccess = {
                     showEditSheet = false
                     fetchUserData()
@@ -344,11 +391,9 @@ fun ProfileScreen(
             UpdateAvatarContent(
                 userId = userId,
                 currentAvatarUrl = userData?.avatarUrl ?: "",
-                onSuccess = {
-                    showAvatarSheet = false
-                    fetchUserData()
-                },
-                onCancel = { showAvatarSheet = false }
+                onSuccess = { showAvatarSheet = false },
+                onCancel = { showAvatarSheet = false },
+                onAvatarUpdated = { fetchUserData() }
             )
         }
     }
@@ -360,6 +405,8 @@ fun EditProfileContent(
     initialFullName: String,
     initialEmail: String,
     initialPhone: String,
+    username: String,
+    roleId: Int,
     onSuccess: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -410,9 +457,26 @@ fun EditProfileContent(
                     isSubmitting = true
                     scope.launch {
                         try {
-                            val response = RetrofitClient.instance.updateProfile(userId, UpdateProfileDto(fullName, email, phone))
-                            if (response.isSuccessful) onSuccess()
-                        } catch (_: Exception) { } finally { isSubmitting = false }
+                            val response = RetrofitClient.instance.updateProfile(
+                                userId,
+                                UpdateProfileDto(
+                                    roleId = roleId,
+                                    email = email,
+                                    fullName = fullName,
+                                    phone = phone,
+                                    username = username
+                                )
+                            )
+                            if (response.isSuccessful) {
+                                onSuccess()
+                            } else {
+                                android.util.Log.e("ProfileScreen", "Update failed: ${response.code()} ${response.message()} ${response.errorBody()?.string()}")
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("ProfileScreen", "Error updating profile", e)
+                        } finally {
+                            isSubmitting = false
+                        }
                     }
                 },
                 modifier = Modifier.weight(1f),
@@ -432,7 +496,8 @@ fun UpdateAvatarContent(
     userId: Int,
     currentAvatarUrl: String,
     onSuccess: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onAvatarUpdated: () -> Unit = {}
 ) {
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
@@ -532,6 +597,7 @@ fun UpdateAvatarContent(
 
                                 val response = RetrofitClient.instance.updateAvatar(userId, body)
                                 if (response.isSuccessful) {
+                                    onAvatarUpdated()
                                     onSuccess()
                                 } else {
                                     errorMessage = "Upload failed: ${response.message()}"

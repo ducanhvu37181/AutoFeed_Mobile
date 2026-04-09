@@ -37,14 +37,30 @@ fun ReportScreen(
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
-    onBackToProfile: () -> Unit = {}
+    onBackToProfile: () -> Unit = {},
+    onNavigateToAlerts: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
     var reports by remember { mutableStateOf<List<ReportData>>(emptyList()) }
+    var inventoryList by remember { mutableStateOf<List<com.example.autofeedmobile.network.InventoryData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    var selectedFilter by remember { mutableStateOf("All") }
+    val filters = listOf("All", "Pending", "Approved", "Rejected")
+
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredReports = reports.filter { report ->
+        val matchesFilter = if (selectedFilter == "All") true
+        else report.status.equals(selectedFilter, ignoreCase = true) ||
+                (selectedFilter == "Approved" && report.status.equals("completed", ignoreCase = true))
+        val matchesSearch = report.type.contains(searchQuery, ignoreCase = true) ||
+                report.description.contains(searchQuery, ignoreCase = true)
+        matchesFilter && matchesSearch
+    }
 
     // Detail state
     var selectedReportDetail by remember { mutableStateOf<ReportData?>(null) }
@@ -64,6 +80,12 @@ fun ReportScreen(
                     errorMessage = null
                 } else {
                     errorMessage = "Failed to load reports"
+                }
+
+                // Also fetch inventory for alerts
+                val invResponse = RetrofitClient.instance.getInventory()
+                if (invResponse.isSuccessful) {
+                    inventoryList = invResponse.body()?.data ?: emptyList()
                 }
             } catch (e: Exception) {
                 errorMessage = "Network error: ${e.localizedMessage}"
@@ -92,32 +114,64 @@ fun ReportScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
+                    Box {
+                        IconButton(onClick = onNavigateToAlerts) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = Color.White)
+                        }
+                        if (inventoryList.any { it.quantity < 3 }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color.Red, CircleShape)
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-8).dp, y = 8.dp)
+                            )
+                        }
                     }
-                    Box(
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .clickable { showMenu = true },
-                        contentAlignment = Alignment.Center
+                            .clickable { showMenu = true }
                     ) {
-                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
-                            AsyncImage(
-                                model = userAvatarUrl,
-                                contentDescription = "User Avatar",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text(
+                                text = userFullName,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
-                        } else {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = "Menu",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                            Text(
+                                text = "Farmer",
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 11.sp
                             )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = userAvatarUrl,
+                                    contentDescription = "User Avatar",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = "Menu",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -205,6 +259,69 @@ fun ReportScreen(
                 .fillMaxSize()
                 .background(Color(0xFFF5F5F5))
         ) {
+            // Summary Cards
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ReportSummaryCard(modifier = Modifier.weight(1f), label = "Total", value = reports.size.toString())
+                ReportSummaryCard(
+                    modifier = Modifier.weight(1f),
+                    label = "Pending",
+                    value = reports.count { it.status.equals("Pending", ignoreCase = true) }.toString(),
+                    valueColor = Color(0xFFFFA000)
+                )
+                ReportSummaryCard(
+                    modifier = Modifier.weight(1f),
+                    label = "Approved",
+                    value = reports.count { it.status.equals("Approved", ignoreCase = true) || it.status.equals("completed", ignoreCase = true) }.toString(),
+                    valueColor = Color(0xFF43A047)
+                )
+            }
+
+            // Search and Filter
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search reports...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    ScrollableTabRow(
+                        selectedTabIndex = filters.indexOf(selectedFilter),
+                        edgePadding = 0.dp,
+                        containerColor = Color.Transparent,
+                        divider = {},
+                        indicator = {}
+                    ) {
+                        filters.forEach { filter ->
+                            FilterChip(
+                                selected = selectedFilter == filter,
+                                onClick = { selectedFilter = filter },
+                                label = { Text(filter) },
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Report List
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFF00897B))
@@ -218,9 +335,12 @@ fun ReportScreen(
                         }
                     }
                 }
-            } else if (reports.isEmpty()) {
+            } else if (filteredReports.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No reports found", color = Color.Gray)
+                    Text(
+                        if (selectedFilter == "All") "No reports found" else "No $selectedFilter reports found", 
+                        color = Color.Gray
+                    )
                 }
             } else {
                 LazyColumn(
@@ -228,11 +348,9 @@ fun ReportScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(reports) { report ->
-                        ReportItemCard(
-                            type = report.type,
-                            date = report.createDate.split("T")[0],
-                            status = report.status,
+                    items(filteredReports) { report ->
+                        ReportItem(
+                            report = report,
                             onClick = {
                                 selectedReportDetail = report
                                 showDetailBottomSheet = true
@@ -278,59 +396,121 @@ fun ReportScreen(
 }
 
 @Composable
-fun ReportItemCard(
-    type: String,
-    date: String,
-    status: String,
+fun ReportSummaryCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    valueColor: Color = Color(0xFF1A1A1A)
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = label, fontSize = 12.sp, color = Color.Gray)
+            Text(
+                text = value,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = valueColor
+            )
+        }
+    }
+}
+
+@Composable
+fun ReportItem(
+    report: ReportData,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(getReportColor(report.type).copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
             ) {
-                Column {
-                    Text(type, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(date, fontSize = 12.sp, color = Color.Gray)
-                }
-                
-                val statusColor = when (status.lowercase()) {
-                    "pending" -> Color(0xFFFFF8E1)
-                    "completed", "approved" -> Color(0xFFE8F5E9)
-                    "rejected" -> Color(0xFFFFEBEE)
-                    else -> Color(0xFFF5F5F5)
-                }
-                val statusTextColor = when (status.lowercase()) {
-                    "pending" -> Color(0xFFFFA000)
-                    "completed", "approved" -> Color(0xFF00C853)
-                    "rejected" -> Color(0xFFD32F2F)
-                    else -> Color(0xFF757575)
-                }
-
-                Surface(
-                    color = statusColor,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = status.replaceFirstChar { it.uppercase() },
-                        color = statusTextColor,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
+                Icon(
+                    getReportIcon(report.type),
+                    contentDescription = null,
+                    tint = getReportColor(report.type)
+                )
             }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = report.type,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = report.description,
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    maxLines = 1
+                )
+            }
+
+            ReportStatusChip(status = report.status)
         }
     }
+}
+
+@Composable
+fun ReportStatusChip(status: String) {
+    val (backgroundColor, textColor) = when (status.lowercase()) {
+        "completed", "approved" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+        "pending" -> Color(0xFFFFF8E1) to Color(0xFFF57C00)
+        "rejected" -> Color(0xFFFFEBEE) to Color(0xFFC62828)
+        else -> Color(0xFFF5F5F5) to Color(0xFF616161)
+    }
+
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        val displayStatus = if (status.equals("completed", ignoreCase = true)) "Approved" else status
+        Text(
+            text = displayStatus.replaceFirstChar { it.uppercase() },
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = textColor
+        )
+    }
+}
+
+fun getReportIcon(type: String) = when (type.lowercase()) {
+    "feed" -> Icons.Default.Pets
+    "maintenance" -> Icons.Default.Build
+    "medical" -> Icons.Default.MedicalServices
+    else -> Icons.Default.Description
+}
+
+fun getReportColor(type: String) = when (type.lowercase()) {
+    "feed" -> Color(0xFF4CAF50)
+    "maintenance" -> Color(0xFF2196F3)
+    "medical" -> Color(0xFFF44336)
+    else -> Color(0xFF9C27B0)
 }
 
 @Preview(showBackground = true)

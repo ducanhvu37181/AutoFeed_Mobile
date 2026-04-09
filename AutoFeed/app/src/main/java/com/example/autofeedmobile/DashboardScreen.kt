@@ -116,43 +116,66 @@ fun DashboardScreen(
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
+                        IconButton(onClick = onNavigateToAlerts) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = Color.White)
+                        }
+                        if (inventoryList.any { it.quantity < 3 }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color.Red, CircleShape)
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-8).dp, y = 8.dp)
+                            )
+                        }
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .clickable { showMenu = true }
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text(
+                                text = userFullName,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "Farmer",
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 11.sp
+                            )
                         }
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
-                                .background(Color.Red, CircleShape)
-                                .align(Alignment.TopEnd)
-                                .offset(x = (-8).dp, y = 8.dp)
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .clickable { showMenu = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
-                            AsyncImage(
-                                model = userAvatarUrl,
-                                contentDescription = "User Avatar",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                onError = { error ->
-                                    android.util.Log.e("Coil", "Dashboard Avatar Load Error: ${error.result.throwable.message}")
-                                }
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = "Menu",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = userAvatarUrl,
+                                    contentDescription = "User Avatar",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                    onError = { error ->
+                                        android.util.Log.e("Coil", "Dashboard Avatar Load Error: ${error.result.throwable.message}")
+                                    }
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = "Menu",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,

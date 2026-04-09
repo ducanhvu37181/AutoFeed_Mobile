@@ -18,9 +18,11 @@ data class UserProfileResponse(
 )
 
 data class UpdateProfileDto(
-    val fullName: String,
+    val roleId: Int,
     val email: String,
-    val phone: String
+    val fullName: String,
+    val phone: String,
+    val username: String
 )
 
 data class LoginResponse(
@@ -124,4 +126,13 @@ data class CreateReportDto(
     val userId: Int,
     val type: String,
     val description: String
+)
+
+data class ChangePasswordDto(
+    val oldPassword: String,
+    val newPassword: String
+)
+
+data class ResetPasswordDto(
+    val email: String
 )

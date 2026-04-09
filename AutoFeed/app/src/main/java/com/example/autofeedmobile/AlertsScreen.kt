@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -68,41 +69,67 @@ fun AlertsScreen(
                     }
                 },
                 actions = {
-                    Box(
+                    Box {
+                        IconButton(onClick = { /* Already on Alerts screen */ }) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = Color.White)
+                        }
+                        if (combinedAlerts.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color.Red, CircleShape)
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-8).dp, y = 8.dp)
+                            )
+                        }
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .clickable { showMenu = true },
-                        contentAlignment = Alignment.Center
+                            .clickable { showMenu = true }
                     ) {
-                        if (!userAvatarUrl.isNullOrEmpty()) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(userAvatarUrl)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "User Avatar",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                onLoading = {
-                                    android.util.Log.d("Coil", "Alerts: Loading avatar from $userAvatarUrl")
-                                },
-                                onSuccess = {
-                                    android.util.Log.d("Coil", "Alerts: Avatar loaded successfully")
-                                },
-                                onError = { error ->
-                                    android.util.Log.e("Coil", "Alerts: Avatar load failed. Error: ${error.result.throwable.message}")
-                                }
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text(
+                                text = userFullName,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
-                        } else {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = "Menu",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                            Text(
+                                text = "Farmer",
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 11.sp
                             )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (!userAvatarUrl.isNullOrEmpty()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(userAvatarUrl)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "User Avatar",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = "Menu",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,

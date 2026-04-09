@@ -23,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.autofeedmobile.network.InventoryData
 import com.example.autofeedmobile.network.RequestData
 import com.example.autofeedmobile.network.RetrofitClient
 import kotlinx.coroutines.launch
@@ -37,7 +38,8 @@ fun RequestScreen(
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
-    onBackToProfile: () -> Unit = {}
+    onBackToProfile: () -> Unit = {},
+    onNavigateToAlerts: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -46,6 +48,7 @@ fun RequestScreen(
 
     val scope = rememberCoroutineScope()
     var requests by remember { mutableStateOf<List<RequestData>>(emptyList()) }
+    var inventoryList by remember { mutableStateOf<List<InventoryData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -66,6 +69,12 @@ fun RequestScreen(
                     requests = response.body()?.data ?: emptyList()
                 } else {
                     errorMessage = "Failed to load requests"
+                }
+
+                // Fetch inventory for the alert dot
+                val inventoryResponse = RetrofitClient.instance.getInventory()
+                if (inventoryResponse.isSuccessful) {
+                    inventoryList = inventoryResponse.body()?.data ?: emptyList()
                 }
             } catch (e: Exception) {
                 errorMessage = "Network error: ${e.localizedMessage}"
@@ -102,32 +111,64 @@ fun RequestScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
+                    Box {
+                        IconButton(onClick = onNavigateToAlerts) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = Color.White)
+                        }
+                        if (inventoryList.any { it.quantity < 3 }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color.Red, CircleShape)
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-8).dp, y = 8.dp)
+                            )
+                        }
                     }
-                    Box(
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .clickable { showMenu = true },
-                        contentAlignment = Alignment.Center
+                            .clickable { showMenu = true }
                     ) {
-                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
-                            AsyncImage(
-                                model = userAvatarUrl,
-                                contentDescription = "User Avatar",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text(
+                                text = userFullName,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
-                        } else {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = "Menu",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                            Text(
+                                text = "Farmer",
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 11.sp
                             )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = userAvatarUrl,
+                                    contentDescription = "User Avatar",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = "Menu",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,

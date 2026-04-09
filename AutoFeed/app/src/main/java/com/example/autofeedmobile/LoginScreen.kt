@@ -22,7 +22,10 @@ import com.example.autofeedmobile.network.UserResponse
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(onLoginSuccess: (UserResponse) -> Unit = {}) {
+fun LoginScreen(
+    onLoginSuccess: (UserResponse) -> Unit = {},
+    onForgotPassword: () -> Unit = {}
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -197,7 +200,7 @@ fun LoginScreen(onLoginSuccess: (UserResponse) -> Unit = {}) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TextButton(onClick = { /* TODO */ }, enabled = !isLoading) {
+                TextButton(onClick = onForgotPassword, enabled = !isLoading) {
                     Text(
                         text = "Forgot password?",
                         color = Color(0xFF00A67E),
