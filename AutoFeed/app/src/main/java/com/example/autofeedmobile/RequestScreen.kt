@@ -364,7 +364,7 @@ fun RequestScreen(
             containerColor = Color.White,
             dragHandle = null
         ) {
-            RequestDetailContent(request = selectedRequestDetail!!)
+            RequestDetailContent(requestId = selectedRequestDetail!!.requestId)
         }
     }
 

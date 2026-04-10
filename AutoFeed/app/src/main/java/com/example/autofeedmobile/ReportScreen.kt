@@ -372,7 +372,7 @@ fun ReportScreen(
             containerColor = Color.White,
             dragHandle = null
         ) {
-            ReportDetailContent(report = selectedReportDetail!!)
+            ReportDetailContent(reportId = selectedReportDetail!!.reportId)
         }
     }
 

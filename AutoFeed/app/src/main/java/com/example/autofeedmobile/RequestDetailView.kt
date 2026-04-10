@@ -17,140 +17,197 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.RequestData
 
+import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestDetailContent(
-    request: RequestData
+    requestId: Int
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White)
-            .padding(16.dp)
-    ) {
-        // Drag Handle
-        Box(
+    val context = LocalContext.current
+    val scrollState = rememberScrollState()
+    var request by remember { mutableStateOf<RequestData?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(requestId) {
+        try {
+            val response = RetrofitClient.instance.getRequestDetail(requestId)
+            if (response.isSuccessful) {
+                request = response.body()?.data
+            } else {
+                errorMessage = "Failed to load request details: ${response.code()}"
+            }
+        } catch (e: Exception) {
+            errorMessage = "Error: ${e.localizedMessage}"
+        } finally {
+            isLoading = false
+        }
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color(0xFF00A67E))
+        }
+    } else if (errorMessage != null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text = errorMessage!!, color = Color.Red)
+        }
+    } else if (request != null) {
+        val currentRequest = request!!
+        Column(
             modifier = Modifier
-                .width(40.dp)
-                .height(4.dp)
-                .background(Color.LightGray, RoundedCornerShape(2.dp))
-                .align(Alignment.CenterHorizontally)
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Title and Status Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(16.dp)
+                .verticalScroll(scrollState)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = request.type,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
-                )
-                Text(
-                    text = "Ref: #${request.requestId}",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
-            }
+            // Drag Handle
+            Box(
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(4.dp)
+                    .background(Color.LightGray, RoundedCornerShape(2.dp))
+                    .align(Alignment.CenterHorizontally)
+            )
             
-            val (statusColor, statusTextColor) = getStatusColors(request.status)
-            Surface(
-                color = statusColor,
-                shape = RoundedCornerShape(16.dp)
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Title and Status Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = request.status,
-                    color = statusTextColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = currentRequest.type,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A1A1A)
+                    )
+                    Text(
+                        text = "Ref: #${currentRequest.requestId}",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
+                
+                val (statusColor, statusTextColor) = getStatusColors(currentRequest.status)
+                Surface(
+                    color = statusColor,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        text = currentRequest.status,
+                        color = statusTextColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Type and Date Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                DetailInfoCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Category,
+                    label = "Type",
+                    value = currentRequest.type
+                )
+                DetailInfoCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.CalendarToday,
+                    label = "Date",
+                    value = currentRequest.createdAt.split("T")[0]
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Type and Date Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            DetailInfoCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.Category,
-                label = "Type",
-                value = request.type
-            )
-            DetailInfoCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.CalendarToday,
-                label = "Date",
-                value = request.createdAt.split("T")[0]
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Description Section
-        Text(
-            text = "Description",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF1A1A1A)
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text(
-                text = request.description,
-                fontSize = 14.sp,
-                color = Color(0xFF455A64),
-                modifier = Modifier.padding(16.dp),
-                lineHeight = 20.sp
-            )
-        }
-
-        if (!request.fileUrl.isNullOrBlank()) {
             Spacer(modifier = Modifier.height(24.dp))
+
+            // Description Section
             Text(
-                text = "Attachment",
+                text = "Description",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1A1A)
             )
+            
             Spacer(modifier = Modifier.height(8.dp))
+            
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                AsyncImage(
-                    model = RetrofitClient.getFullUrl(request.fileUrl),
-                    contentDescription = "Attachment",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                Text(
+                    text = currentRequest.description,
+                    fontSize = 14.sp,
+                    color = Color(0xFF455A64),
+                    modifier = Modifier.padding(16.dp),
+                    lineHeight = 20.sp
                 )
             }
+
+            if (!currentRequest.fileUrl.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Attachment",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A1A1A)
+                    )
+                    
+                    val fullUrl = RetrofitClient.getFullUrl(currentRequest.fileUrl) ?: ""
+                    TextButton(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(fullUrl))
+                            context.startActivity(intent)
+                        }
+                    ) {
+                        Text("View file", color = Color(0xFF00897B))
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    AsyncImage(
+                        model = RetrofitClient.getFullUrl(currentRequest.fileUrl),
+                        contentDescription = "Attachment",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
-        
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -205,15 +262,5 @@ private fun getStatusColors(status: String): Pair<Color, Color> {
 @Preview(showBackground = true)
 @Composable
 fun RequestDetailPreview() {
-    RequestDetailContent(
-        request = RequestData(
-            requestId = 1,
-            userId = 1,
-            type = "Feed",
-            description = "Need 500kg of premium feed",
-            status = "Pending",
-            createdAt = "2026-02-05T10:00:00Z",
-            fileUrl = null
-        )
-    )
+    // Preview removed as it requires fetching data
 }

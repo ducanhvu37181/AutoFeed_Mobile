@@ -35,13 +35,15 @@ interface ApiService {
     @GET("api/Request/user/{userId}")
     suspend fun getRequests(@Path("userId") userId: Int): Response<RequestListResponse>
 
+    @GET("api/Request/{id}")
+    suspend fun getRequestDetail(@Path("id") id: Int): Response<RequestDetailResponse>
+
     @Multipart
     @POST("api/Request")
     suspend fun createRequest(
-        @Part("userId") userId: Int,
+        @Part("userId") userId: okhttp3.RequestBody,
         @Part("type") type: okhttp3.RequestBody,
         @Part("description") description: okhttp3.RequestBody,
-        @Part File: okhttp3.MultipartBody.Part? = null,
         @Part file: okhttp3.MultipartBody.Part? = null
     ): Response<Unit>
 
@@ -54,13 +56,15 @@ interface ApiService {
     @GET("api/Report/user/{userId}")
     suspend fun getReports(@Path("userId") userId: Int): Response<ReportListResponse>
 
+    @GET("api/Report/{id}")
+    suspend fun getReportDetail(@Path("id") id: Int): Response<ReportDetailResponse>
+
     @Multipart
     @POST("api/Report")
     suspend fun createReport(
-        @Part("userId") userId: Int,
+        @Part("userId") userId: okhttp3.RequestBody,
         @Part("type") type: okhttp3.RequestBody,
         @Part("description") description: okhttp3.RequestBody,
-        @Part File: okhttp3.MultipartBody.Part? = null,
         @Part file: okhttp3.MultipartBody.Part? = null
     ): Response<Unit>
 

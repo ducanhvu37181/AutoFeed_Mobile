@@ -185,18 +185,18 @@ fun SendRequestContent(
                                         }
                                     }
                                     val requestFile = file.asRequestBody(context.contentResolver.getType(uri)?.toMediaTypeOrNull())
-                                    filePart = MultipartBody.Part.createFormData("File", file.name, requestFile)
+                                    filePart = MultipartBody.Part.createFormData("file", file.name, requestFile)
                                 }
                                 
                                 val typeBody = type.toRequestBody("text/plain".toMediaTypeOrNull())
                                 val descBody = description.toRequestBody("text/plain".toMediaTypeOrNull())
+                                val userIdBody = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
 
                                 val response = RetrofitClient.instance.createRequest(
-                                    userId,
+                                    userIdBody,
                                     typeBody,
                                     descBody,
-                                    filePart,
-                                    null
+                                    filePart
                                 )
                                 if (response.isSuccessful) {
                                     onSuccess()
