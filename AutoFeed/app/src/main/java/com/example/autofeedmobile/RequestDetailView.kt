@@ -16,19 +16,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-data class RequestTask(
-    val id: String,
-    val title: String,
-    val status: String,
-    val type: String,
-    val createDate: String,
-    val description: String
-)
+
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.network.RequestData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestDetailContent(
-    request: RequestTask
+    request: RequestData
 ) {
     Column(
         modifier = Modifier
@@ -55,13 +52,13 @@ fun RequestDetailContent(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = request.title,
+                    text = request.type,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1A1A)
                 )
                 Text(
-                    text = request.id,
+                    text = "Ref: #${request.requestId}",
                     fontSize = 14.sp,
                     color = Color.Gray
                 )
@@ -99,7 +96,7 @@ fun RequestDetailContent(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.CalendarToday,
                 label = "Date",
-                value = request.createDate
+                value = request.createdAt.split("T")[0]
             )
         }
 
@@ -127,6 +124,30 @@ fun RequestDetailContent(
                 modifier = Modifier.padding(16.dp),
                 lineHeight = 20.sp
             )
+        }
+
+        if (!request.fileUrl.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Attachment",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A1A1A)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                AsyncImage(
+                    model = RetrofitClient.getFullUrl(request.fileUrl),
+                    contentDescription = "Attachment",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
         
         Spacer(modifier = Modifier.height(32.dp))
@@ -185,13 +206,14 @@ private fun getStatusColors(status: String): Pair<Color, Color> {
 @Composable
 fun RequestDetailPreview() {
     RequestDetailContent(
-        request = RequestTask(
-            id = "REQ001",
-            title = "Restock Premium Feed",
+        request = RequestData(
+            requestId = 1,
+            userId = 1,
+            type = "Feed",
+            description = "Need 500kg of premium feed",
             status = "Pending",
-            type = "Inventory",
-            createDate = "2026-02-05",
-            description = "Need 500kg of premium feed"
+            createdAt = "2026-02-05T10:00:00Z",
+            fileUrl = null
         )
     )
 }

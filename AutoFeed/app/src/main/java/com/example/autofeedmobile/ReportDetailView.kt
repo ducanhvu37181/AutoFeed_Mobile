@@ -15,6 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.ReportData
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -131,6 +134,30 @@ fun ReportDetailContent(
                 modifier = Modifier.padding(16.dp),
                 lineHeight = 20.sp
             )
+        }
+
+        if (!report.fileUrl.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Attachment",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A1A1A)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                AsyncImage(
+                    model = RetrofitClient.getFullUrl(report.fileUrl),
+                    contentDescription = "Attachment",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
         
         Spacer(modifier = Modifier.height(32.dp))

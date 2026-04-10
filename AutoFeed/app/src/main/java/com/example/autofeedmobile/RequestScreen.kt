@@ -364,15 +364,7 @@ fun RequestScreen(
             containerColor = Color.White,
             dragHandle = null
         ) {
-            val task = RequestTask(
-                id = "REQ${selectedRequestDetail!!.requestId}",
-                title = selectedRequestDetail!!.type,
-                status = selectedRequestDetail!!.status,
-                type = selectedRequestDetail!!.type,
-                createDate = selectedRequestDetail!!.createdAt.split("T")[0], // Keep only Date
-                description = selectedRequestDetail!!.description
-            )
-            RequestDetailContent(request = task)
+            RequestDetailContent(request = selectedRequestDetail!!)
         }
     }
 

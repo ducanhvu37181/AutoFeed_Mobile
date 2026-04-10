@@ -69,7 +69,8 @@ data class RequestData(
     val type: String,
     val description: String,
     val status: String,
-    val createdAt: String
+    val createdAt: String,
+    val fileUrl: String?
 )
 
 data class RequestListResponse(
@@ -112,7 +113,8 @@ data class ReportData(
     val type: String,
     val description: String,
     val status: String,
-    val createDate: String
+    val createDate: String,
+    val fileUrl: String?
 )
 
 data class ReportListResponse(
