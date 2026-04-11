@@ -39,7 +39,7 @@ fun RequestScreen(
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onBackToProfile: () -> Unit = {},
-    onNavigateToAlerts: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -71,7 +71,7 @@ fun RequestScreen(
                     errorMessage = "Failed to load requests"
                 }
 
-                // Fetch inventory for the alert dot
+                // Fetch inventory for the notification dot
                 val inventoryResponse = RetrofitClient.instance.getInventory()
                 if (inventoryResponse.isSuccessful) {
                     inventoryList = inventoryResponse.body()?.data ?: emptyList()
@@ -112,8 +112,8 @@ fun RequestScreen(
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = onNavigateToAlerts) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = Color.White)
+                        IconButton(onClick = onNavigateToNotifications) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                         }
                         if (inventoryList.any { it.quantity < 3 }) {
                             Box(

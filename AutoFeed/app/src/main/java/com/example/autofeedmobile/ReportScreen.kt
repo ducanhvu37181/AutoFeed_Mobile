@@ -38,7 +38,7 @@ fun ReportScreen(
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onBackToProfile: () -> Unit = {},
-    onNavigateToAlerts: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
@@ -82,7 +82,7 @@ fun ReportScreen(
                     errorMessage = "Failed to load reports"
                 }
 
-                // Also fetch inventory for alerts
+                // Also fetch inventory for notifications
                 val invResponse = RetrofitClient.instance.getInventory()
                 if (invResponse.isSuccessful) {
                     inventoryList = invResponse.body()?.data ?: emptyList()
@@ -115,8 +115,8 @@ fun ReportScreen(
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = onNavigateToAlerts) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = Color.White)
+                        IconButton(onClick = onNavigateToNotifications) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                         }
                         if (inventoryList.any { it.quantity < 3 }) {
                             Box(

@@ -39,7 +39,7 @@ fun ScheduleScreen(
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
-    onNavigateToAlerts: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Pending", "In Progress", "Completed")
@@ -80,7 +80,7 @@ fun ScheduleScreen(
                     errorMessage = "Failed to load schedules"
                 }
 
-                // Also fetch inventory for alerts
+                // Also fetch inventory for notifications
                 val invResponse = RetrofitClient.instance.getInventory()
                 if (invResponse.isSuccessful) {
                     inventoryList = invResponse.body()?.data ?: emptyList()
@@ -129,8 +129,8 @@ fun ScheduleScreen(
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = onNavigateToAlerts) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = Color.White)
+                        IconButton(onClick = onNavigateToNotifications) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                         }
                         if (inventoryList.any { it.quantity < 3 }) {
                             Box(
