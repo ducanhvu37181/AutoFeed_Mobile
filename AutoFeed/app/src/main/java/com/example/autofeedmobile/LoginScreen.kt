@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (UserResponse) -> Unit = {},
+    onLoginSuccess: (UserResponse, String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
@@ -164,8 +164,9 @@ fun LoginScreen(
                             scope.launch {
                                 try {
                                     val response = RetrofitClient.instance.login(email, password)
-                                    if (response.isSuccessful && response.body()?.user != null) {
-                                        onLoginSuccess(response.body()!!.user!!)
+                                    val body = response.body()
+                                    if (response.isSuccessful && body?.user != null && body.token != null) {
+                                        onLoginSuccess(body.user!!, body.token!!)
                                     } else {
                                         errorMessage = "Login failed: Invalid credentials"
                                     }

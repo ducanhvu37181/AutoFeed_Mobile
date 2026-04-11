@@ -46,7 +46,7 @@ fun ProfileScreen(
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToRequests: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
-    onNavigateToAlerts: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onProfileUpdated: (UserResponse) -> Unit = {}
 ) {
@@ -100,7 +100,7 @@ fun ProfileScreen(
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = onNavigateToAlerts) {
+                        IconButton(onClick = onNavigateToNotifications) {
                             Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                         }
                         if (inventoryList.any { it.quantity < 3 }) {

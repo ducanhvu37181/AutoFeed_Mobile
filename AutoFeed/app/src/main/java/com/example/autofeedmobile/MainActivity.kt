@@ -10,7 +10,7 @@ import com.example.autofeedmobile.network.UserResponse
 import com.example.autofeedmobile.ui.theme.AutoFeedMobileTheme
 
 enum class Screen {
-    Login, Dashboard, Inventory, Schedule, Requests, Reports, Profile, Alerts, Settings, ChangePassword, ForgotPassword
+    Login, Dashboard, Inventory, Schedule, Requests, Reports, Profile, Notifications, Settings, ChangePassword, ForgotPassword
 }
 
 class MainActivity : ComponentActivity() {
@@ -19,15 +19,31 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AutoFeedMobileTheme {
+                val sessionManager = remember { SessionManager(this@MainActivity) }
                 var currentScreen by remember { mutableStateOf(Screen.Login) }
                 var userId by remember { mutableIntStateOf(-1) }
                 var userFullName by remember { mutableStateOf("") }
                 var userAvatarUrl by remember { mutableStateOf<String?>(null) }
 
+                LaunchedEffect(Unit) {
+                    val token = sessionManager.fetchAuthToken()
+                    val user = sessionManager.fetchUser()
+                    if (token != null && user != null) {
+                        RetrofitClient.setAuthToken(token)
+                        userId = user.userId
+                        userFullName = user.fullName
+                        userAvatarUrl = RetrofitClient.getFullUrl(user.avatarUrl)
+                        currentScreen = Screen.Dashboard
+                    }
+                }
+
                 when (currentScreen) {
                     Screen.Login -> {
                         LoginScreen(
-                            onLoginSuccess = { user ->
+                            onLoginSuccess = { user, token ->
+                                sessionManager.saveAuthToken(token)
+                                sessionManager.saveUser(user)
+                                RetrofitClient.setAuthToken(token)
                                 userId = user.userId
                                 userFullName = user.fullName
                                 userAvatarUrl = RetrofitClient.getFullUrl(user.avatarUrl)
@@ -44,11 +60,15 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
-                            onLogout = { currentScreen = Screen.Login },
+                            onLogout = { 
+                                sessionManager.clearSession()
+                                RetrofitClient.setAuthToken(null)
+                                currentScreen = Screen.Login 
+                            },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToAlerts = { currentScreen = Screen.Alerts }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
                         )
                     }
                     Screen.Inventory -> {
@@ -56,11 +76,15 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
-                            onLogout = { currentScreen = Screen.Login },
+                            onLogout = { 
+                                sessionManager.clearSession()
+                                RetrofitClient.setAuthToken(null)
+                                currentScreen = Screen.Login 
+                            },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToAlerts = { currentScreen = Screen.Alerts }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
                         )
                     }
                     Screen.Schedule -> {
@@ -68,11 +92,15 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
-                            onLogout = { currentScreen = Screen.Login },
+                            onLogout = { 
+                                sessionManager.clearSession()
+                                RetrofitClient.setAuthToken(null)
+                                currentScreen = Screen.Login 
+                            },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToAlerts = { currentScreen = Screen.Alerts }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
                         )
                     }
                     Screen.Requests -> {
@@ -80,12 +108,16 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
-                            onLogout = { currentScreen = Screen.Login },
+                            onLogout = { 
+                                sessionManager.clearSession()
+                                RetrofitClient.setAuthToken(null)
+                                currentScreen = Screen.Login 
+                            },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onBackToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToAlerts = { currentScreen = Screen.Alerts }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
                         )
                     }
                     Screen.Reports -> {
@@ -93,27 +125,36 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
-                            onLogout = { currentScreen = Screen.Login },
+                            onLogout = { 
+                                sessionManager.clearSession()
+                                RetrofitClient.setAuthToken(null)
+                                currentScreen = Screen.Login 
+                            },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onBackToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToAlerts = { currentScreen = Screen.Alerts }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
                         )
                     }
                     Screen.Profile -> {
                         ProfileScreen(
                             userId = userId,
                             userFullName = userFullName,
-                            onLogout = { currentScreen = Screen.Login },
+                            onLogout = { 
+                                sessionManager.clearSession()
+                                RetrofitClient.setAuthToken(null)
+                                currentScreen = Screen.Login 
+                            },
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToRequests = { currentScreen = Screen.Requests },
                             onNavigateToReports = { currentScreen = Screen.Reports },
-                            onNavigateToAlerts = { currentScreen = Screen.Alerts },
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
                             onNavigateToSettings = { currentScreen = Screen.Settings },
                             onProfileUpdated = { updatedUser ->
+                                sessionManager.saveUser(updatedUser)
                                 userFullName = updatedUser.fullName
                                 userAvatarUrl = RetrofitClient.getFullUrl(updatedUser.avatarUrl)
                             }
@@ -131,11 +172,16 @@ class MainActivity : ComponentActivity() {
                             onBack = { currentScreen = Screen.Settings }
                         )
                     }
-                    Screen.Alerts -> {
-                        AlertsScreen(
+                    Screen.Notifications -> {
+                        NotificationScreen(
+                            userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
-                            onLogout = { currentScreen = Screen.Login },
+                            onLogout = { 
+                                sessionManager.clearSession()
+                                RetrofitClient.setAuthToken(null)
+                                currentScreen = Screen.Login 
+                            },
                             onBack = { currentScreen = Screen.Dashboard }
                         )
                     }
