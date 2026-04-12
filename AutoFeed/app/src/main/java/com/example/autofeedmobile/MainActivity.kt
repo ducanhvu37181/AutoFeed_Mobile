@@ -1,12 +1,19 @@
 package com.example.autofeedmobile
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
+import androidx.core.content.ContextCompat
+import androidx.work.*
 import com.example.autofeedmobile.network.RetrofitClient
-import com.example.autofeedmobile.network.UserResponse
+import java.util.concurrent.TimeUnit
 import com.example.autofeedmobile.ui.theme.AutoFeedMobileTheme
 
 enum class Screen {
@@ -16,9 +23,32 @@ enum class Screen {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        NotificationHelper.createNotificationChannel(this)
         enableEdgeToEdge()
         setContent {
             AutoFeedMobileTheme {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                var hasNotificationPermission by remember {
+                    mutableStateOf(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                        } else true
+                    )
+                }
+
+                val permissionLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) { isGranted ->
+                    hasNotificationPermission = isGranted
+                }
+
+                LaunchedEffect(Unit) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    setupBackgroundWorker(context)
+                }
+
                 val sessionManager = remember { SessionManager(this@MainActivity) }
                 var currentScreen by remember { mutableStateOf(Screen.Login) }
                 var userId by remember { mutableIntStateOf(-1) }
@@ -188,5 +218,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun setupBackgroundWorker(context: android.content.Context) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val repeatingRequest = PeriodicWorkRequestBuilder<NotificationWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            "notification_worker",
+            ExistingPeriodicWorkPolicy.KEEP,
+            repeatingRequest
+        )
     }
 }

@@ -23,13 +23,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
-import com.example.autofeedmobile.network.InventoryData
 import com.example.autofeedmobile.network.RetrofitClient
-import com.example.autofeedmobile.network.ScheduleData
-import com.example.autofeedmobile.network.ReportData
-import com.example.autofeedmobile.network.RequestData
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -39,7 +34,7 @@ data class AppNotification(
     val message: String,
     val color: Color,
     val indicatorColor: Color,
-    val type: String // "Inventory", "Schedule", "Report", "Request"
+    val type: String
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,9 +50,9 @@ fun NotificationScreen(
     var notifications by remember { mutableStateOf<List<AppNotification>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val apiDateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
-    val timeParser = remember { SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()) }
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -74,59 +69,68 @@ fun NotificationScreen(
 
                 val newNotifications = mutableListOf<AppNotification>()
 
-                // 1. Inventory Notifications
+                // 1. Inventory
                 if (inventoryResponse.isSuccessful) {
-                    val items = inventoryResponse.body()?.data ?: emptyList()
-                    items.forEach { item ->
-                        if (item.quantity == 0) {
-                            newNotifications.add(AppNotification("Out of Stock", "${item.foodName} is empty", Color(0xFFFFEBEE), Color.Red, "Inventory"))
-                        } else if (item.quantity in 1..2) {
-                            newNotifications.add(AppNotification("Low Stock", "${item.foodName} below minimum (${item.quantity} left)", Color(0xFFFFF3E0), Color(0xFFFF9800), "Inventory"))
+                    inventoryResponse.body()?.data?.forEach { item ->
+                        if (item.quantity < 3) {
+                            val title = if (item.quantity == 0) "Out of Stock" else "Low Stock"
+                            val msg = "${item.foodName} is low in stock (${item.quantity})"
+                            newNotifications.add(AppNotification(title, msg, Color(0xFFFFEBEE), Color.Red, "Inventory"))
+                            
+                            val key = "inv_${item.inventId}_low"
+                            if (NotificationHelper.shouldNotify(context, key)) {
+                                NotificationHelper.showNotification(context, title, msg, item.inventId)
+                                NotificationHelper.markAsNotified(context, key)
+                            }
                         }
                     }
                 }
 
-                // 2. Schedule Notifications (5 mins before)
+                // 2. Schedules
                 if (schedulesResponse.isSuccessful) {
-                    val schedules = schedulesResponse.body()?.data ?: emptyList()
-                    val now = Calendar.getInstance()
-                    schedules.forEach { schedule ->
+                    schedulesResponse.body()?.data?.forEach { schedule ->
                         if (!schedule.status.equals("Completed", ignoreCase = true)) {
-                            try {
-                                val startTime = Calendar.getInstance()
-                                startTime.time = timeParser.parse(schedule.startTime!!)!!
-                                
-                                val diffMillis = startTime.timeInMillis - now.timeInMillis
-                                val diffMinutes = diffMillis / (60 * 1000)
-                                
-                                if (diffMinutes in 0..5) {
-                                    newNotifications.add(AppNotification("Upcoming Schedule", "${schedule.taskTitle} starts in $diffMinutes mins", Color(0xFFE8F5E9), Color(0xFF4CAF50), "Schedule"))
-                                }
-                            } catch (_: Exception) {}
+                            val title = "Upcoming Schedule"
+                            val msg = "Task: ${schedule.taskTitle} is pending"
+                            newNotifications.add(AppNotification(title, msg, Color(0xFFE8F5E9), Color(0xFF4CAF50), "Schedule"))
                         }
                     }
                 }
 
-                // 3. Reports Notifications (Approved/Rejected)
+                // 3. Reports
                 if (reportsResponse.isSuccessful) {
-                    val reports = reportsResponse.body()?.data ?: emptyList()
-                    reports.forEach { report ->
-                        if (report.status.equals("Approved", ignoreCase = true)) {
-                            newNotifications.add(AppNotification("Report Approved", "Your report '${report.type}' has been approved", Color(0xFFE8F5E9), Color(0xFF4CAF50), "Report"))
-                        } else if (report.status.equals("Rejected", ignoreCase = true)) {
-                            newNotifications.add(AppNotification("Report Rejected", "Your report '${report.type}' was rejected", Color(0xFFFFEBEE), Color.Red, "Report"))
+                    reportsResponse.body()?.data?.forEach { report ->
+                        val status = report.status.lowercase()
+                        if (status == "reviewed" || status == "approved" || status == "rejected") {
+                            val isRejected = status == "rejected"
+                            val title = if (isRejected) "Report Rejected" else "Report Approved"
+                            val msg = "Your report '${report.type}' is $status"
+                            newNotifications.add(AppNotification(title, msg, if (isRejected) Color(0xFFFFEBEE) else Color(0xFFE8F5E9), if (isRejected) Color.Red else Color(0xFF4CAF50), "Report"))
+
+                            val key = "rep_${report.reportId}_$status"
+                            if (NotificationHelper.shouldNotify(context, key)) {
+                                NotificationHelper.showNotification(context, title, msg, report.reportId + 3000)
+                                NotificationHelper.markAsNotified(context, key)
+                            }
                         }
                     }
                 }
 
-                // 4. Requests Notifications (Approved/Rejected)
+                // 4. Requests
                 if (requestsResponse.isSuccessful) {
-                    val requests = requestsResponse.body()?.data ?: emptyList()
-                    requests.forEach { request ->
-                        if (request.status.equals("Approved", ignoreCase = true)) {
-                            newNotifications.add(AppNotification("Request Approved", "Your request for '${request.type}' has been approved", Color(0xFFE8F5E9), Color(0xFF4CAF50), "Request"))
-                        } else if (request.status.equals("Rejected", ignoreCase = true)) {
-                            newNotifications.add(AppNotification("Request Rejected", "Your request for '${request.type}' was rejected", Color(0xFFFFEBEE), Color.Red, "Request"))
+                    requestsResponse.body()?.data?.forEach { request ->
+                        val status = request.status.lowercase()
+                        if (status == "reviewed" || status == "approved" || status == "rejected") {
+                            val isRejected = status == "rejected"
+                            val title = if (isRejected) "Request Rejected" else "Request Approved"
+                            val msg = "Your request for '${request.type}' is $status"
+                            newNotifications.add(AppNotification(title, msg, if (isRejected) Color(0xFFFFEBEE) else Color(0xFFE8F5E9), if (isRejected) Color.Red else Color(0xFF4CAF50), "Request"))
+
+                            val key = "req_${request.requestId}_$status"
+                            if (NotificationHelper.shouldNotify(context, key)) {
+                                NotificationHelper.showNotification(context, title, msg, request.requestId + 2000)
+                                NotificationHelper.markAsNotified(context, key)
+                            }
                         }
                     }
                 }

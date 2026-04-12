@@ -94,7 +94,7 @@ fun RequestScreen(
         val matchesSearch = request.type.contains(searchQuery, ignoreCase = true) || 
                             request.description.contains(searchQuery, ignoreCase = true)
         matchesFilter && matchesSearch
-    }
+    }.sortedByDescending { it.createdAt }
 
     Scaffold(
         topBar = {

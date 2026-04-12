@@ -60,7 +60,7 @@ fun ReportScreen(
         val matchesSearch = report.type.contains(searchQuery, ignoreCase = true) ||
                 report.description.contains(searchQuery, ignoreCase = true)
         matchesFilter && matchesSearch
-    }
+    }.sortedByDescending { it.createDate }
 
     // Detail state
     var selectedReportDetail by remember { mutableStateOf<ReportData?>(null) }
