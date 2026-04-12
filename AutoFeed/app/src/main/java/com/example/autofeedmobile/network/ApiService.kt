@@ -35,8 +35,17 @@ interface ApiService {
     @GET("api/Request/user/{userId}")
     suspend fun getRequests(@Path("userId") userId: Int): Response<RequestListResponse>
 
+    @GET("api/Request/{id}")
+    suspend fun getRequestDetail(@Path("id") id: Int): Response<RequestDetailResponse>
+
+    @Multipart
     @POST("api/Request")
-    suspend fun createRequest(@Body request: CreateRequestDto): Response<Unit>
+    suspend fun createRequest(
+        @Part("userId") userId: okhttp3.RequestBody,
+        @Part("type") type: okhttp3.RequestBody,
+        @Part("description") description: okhttp3.RequestBody,
+        @Part file: okhttp3.MultipartBody.Part? = null
+    ): Response<Unit>
 
     @GET("api/Inventory")
     suspend fun getInventory(
@@ -47,8 +56,17 @@ interface ApiService {
     @GET("api/Report/user/{userId}")
     suspend fun getReports(@Path("userId") userId: Int): Response<ReportListResponse>
 
+    @GET("api/Report/{id}")
+    suspend fun getReportDetail(@Path("id") id: Int): Response<ReportDetailResponse>
+
+    @Multipart
     @POST("api/Report")
-    suspend fun createReport(@Body report: CreateReportDto): Response<Unit>
+    suspend fun createReport(
+        @Part("userId") userId: okhttp3.RequestBody,
+        @Part("type") type: okhttp3.RequestBody,
+        @Part("description") description: okhttp3.RequestBody,
+        @Part file: okhttp3.MultipartBody.Part? = null
+    ): Response<Unit>
 
     @GET("api/User/{id}")
     suspend fun getUserProfile(@Path("id") id: Int): Response<UserProfileResponse>

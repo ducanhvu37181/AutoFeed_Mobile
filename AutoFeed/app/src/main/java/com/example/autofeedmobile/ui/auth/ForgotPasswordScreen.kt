@@ -1,4 +1,4 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.ui.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

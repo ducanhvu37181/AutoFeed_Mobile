@@ -1,4 +1,7 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.ui.schedule
+
+import com.example.autofeedmobile.util.formatTimeOnly
+
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,7 +42,7 @@ fun ScheduleScreen(
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
-    onNavigateToAlerts: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Pending", "In Progress", "Completed")
@@ -80,7 +83,7 @@ fun ScheduleScreen(
                     errorMessage = "Failed to load schedules"
                 }
 
-                // Also fetch inventory for alerts
+                // Also fetch inventory for notifications
                 val invResponse = RetrofitClient.instance.getInventory()
                 if (invResponse.isSuccessful) {
                     inventoryList = invResponse.body()?.data ?: emptyList()
@@ -112,11 +115,17 @@ fun ScheduleScreen(
         fetchSchedules()
     }
 
-    val filteredSchedules = if (selectedFilter == "All") {
-        schedules
-    } else {
-        schedules.filter { it.status.equals(selectedFilter, ignoreCase = true) }
-    }
+    val filteredSchedules = schedules
+        .filter { !it.status.equals("Disabled", ignoreCase = true) }
+        .let { list ->
+            if (selectedFilter == "All") {
+                list.sortedWith(compareBy<ScheduleData> { it.status.equals("Completed", ignoreCase = true) }
+                    .thenBy { it.startTime })
+            } else {
+                list.filter { it.status.equals(selectedFilter, ignoreCase = true) }
+                    .sortedBy { it.startTime }
+            }
+        }
 
     Scaffold(
         topBar = {
@@ -129,8 +138,8 @@ fun ScheduleScreen(
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = onNavigateToAlerts) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = Color.White)
+                        IconButton(onClick = onNavigateToNotifications) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                         }
                         if (inventoryList.any { it.quantity < 3 }) {
                             Box(
@@ -287,8 +296,9 @@ fun ScheduleScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Progress Bar
-                val completedCount = schedules.count { it.status.equals("Completed", ignoreCase = true) }
-                val totalCount = schedules.size
+                val activeSchedules = schedules.filter { !it.status.equals("Disabled", ignoreCase = true) }
+                val completedCount = activeSchedules.count { it.status.equals("Completed", ignoreCase = true) }
+                val totalCount = activeSchedules.size
                 val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
 
                 Row(

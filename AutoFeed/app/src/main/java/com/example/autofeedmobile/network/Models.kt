@@ -1,5 +1,7 @@
 package com.example.autofeedmobile.network
 
+import com.google.gson.annotations.SerializedName
+
 data class UserResponse(
     val userId: Int,
     val username: String,
@@ -69,7 +71,9 @@ data class RequestData(
     val type: String,
     val description: String,
     val status: String,
-    val createdAt: String
+    val createdAt: String,
+    @SerializedName("url")
+    val fileUrl: String?
 )
 
 data class RequestListResponse(
@@ -82,6 +86,13 @@ data class RequestListResponse(
 data class CreateRequestDto(
     val userId: Int,
     val type: String,
+    val description: String
+)
+
+data class RequestDetailResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: RequestData,
     val description: String
 )
 
@@ -112,7 +123,9 @@ data class ReportData(
     val type: String,
     val description: String,
     val status: String,
-    val createDate: String
+    val createDate: String,
+    @SerializedName("url")
+    val fileUrl: String?
 )
 
 data class ReportListResponse(
@@ -125,6 +138,13 @@ data class ReportListResponse(
 data class CreateReportDto(
     val userId: Int,
     val type: String,
+    val description: String
+)
+
+data class ReportDetailResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: ReportData,
     val description: String
 )
 

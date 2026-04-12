@@ -1,4 +1,9 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.ui.dashboard
+
+import com.example.autofeedmobile.ui.schedule.ScheduleTask
+import com.example.autofeedmobile.ui.schedule.ScheduleDetailContent
+import com.example.autofeedmobile.util.formatTimeOnly
+
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,7 +45,7 @@ fun DashboardScreen(
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
-    onNavigateToAlerts: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
@@ -66,7 +71,10 @@ fun DashboardScreen(
                 val today = apiDateFormatter.format(Date())
                 val scheduleResponse = RetrofitClient.instance.getSchedulesByDate(userId, today)
                 if (scheduleResponse.isSuccessful) {
-                    schedules = scheduleResponse.body()?.data ?: emptyList()
+                    schedules = (scheduleResponse.body()?.data ?: emptyList())
+                        .filter { !it.status.equals("Disabled", ignoreCase = true) }
+                        .sortedWith(compareBy<ScheduleData> { it.status.equals("Completed", ignoreCase = true) }
+                            .thenBy { it.startTime })
                 }
                 
                 // Fetch Inventory for Summary
@@ -116,8 +124,8 @@ fun DashboardScreen(
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = onNavigateToAlerts) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = Color.White)
+                        IconButton(onClick = onNavigateToNotifications) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                         }
                         if (inventoryList.any { it.quantity < 3 }) {
                             Box(
@@ -292,55 +300,31 @@ fun DashboardScreen(
                                 iconContainerColor = Color(0xFFFF5722).copy(alpha = 0.1f),
                                 iconColor = Color(0xFFFF5722),
                                 value = "$criticalStockCount",
-                                label = "Low/No Stock"
+                                label = "Critical Items"
                             )
                         }
                     }
                 }
 
-                // Alerts Section
+                // Tasks Section (replaces Notifications)
                 item {
-                    val outOfStockItems = inventoryList.filter { it.quantity == 0 }
-                    val lowStockItems = inventoryList.filter { it.quantity in 1..2 }
-                    val combinedAlerts = (outOfStockItems + lowStockItems)
-                    
-                    if (combinedAlerts.isNotEmpty()) {
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Alerts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                if (combinedAlerts.size > 3) {
-                                    TextButton(onClick = onNavigateToAlerts) {
-                                        Text("View All", color = Color(0xFF00897B))
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            combinedAlerts.take(3).forEach { item ->
-                                val isOutOfStock = item.quantity == 0
-                                AlertItem(
-                                    title = if (isOutOfStock) "Out of Stock" else "Low Stock",
-                                    message = if (isOutOfStock) "${item.foodName} is empty" else "${item.foodName} below minimum",
-                                    color = Color(0xFFFFEBEE),
-                                    indicatorColor = Color.Red,
-                                    onClick = onNavigateToInventory
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Recent Tasks", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         }
-                    } else {
-                        Column {
-                            Text("Alerts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            AlertItem(
-                                title = "Normal Status",
-                                message = "All systems operating normally",
-                                color = Color(0xFFE8F5E9),
-                                indicatorColor = Color(0xFF2E7D32)
-                            )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Check your schedule and inventory regularly to stay updated.", fontSize = 14.sp, color = Color.Gray)
+                            }
                         }
                     }
                 }
@@ -526,7 +510,7 @@ fun SummaryCard(
 }
 
 @Composable
-fun AlertItem(
+fun DashboardNotificationItem(
     title: String,
     message: String,
     color: Color,
