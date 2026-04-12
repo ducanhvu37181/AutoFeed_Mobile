@@ -19,8 +19,11 @@ object NotificationHelper {
     private const val PREFS_NAME = "notification_prefs"
 
     fun shouldNotify(context: Context, key: String): Boolean {
+        // Return true always for status changes/schedules if we want "always pop-up"
+        // But we still need to prevent spamming the SAME notification repeatedly.
+        // We'll use the key but maybe expire it or use a more specific key.
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return !prefs.contains(key)
+        return !prefs.getBoolean(key, false)
     }
 
     fun markAsNotified(context: Context, key: String) {

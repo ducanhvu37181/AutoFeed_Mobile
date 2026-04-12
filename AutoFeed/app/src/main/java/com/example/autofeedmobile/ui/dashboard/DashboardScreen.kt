@@ -54,6 +54,9 @@ fun DashboardScreen(
     var isLoading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
+    // Key to force recomposition of avatar when URL changes
+    val avatarUrlKey = remember(userAvatarUrl) { userAvatarUrl }
+
     // Detail state
     var selectedTaskDetail by remember { mutableStateOf<ScheduleTask?>(null) }
     var selectedTaskId by remember { mutableIntStateOf(-1) }
@@ -166,9 +169,9 @@ fun DashboardScreen(
                                 .background(Color.White.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                            if (!avatarUrlKey.isNullOrEmpty()) {
                                 AsyncImage(
-                                    model = userAvatarUrl,
+                                    model = avatarUrlKey,
                                     contentDescription = "User Avatar",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop,
