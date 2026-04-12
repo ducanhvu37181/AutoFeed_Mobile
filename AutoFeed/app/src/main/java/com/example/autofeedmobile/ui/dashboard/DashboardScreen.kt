@@ -1,4 +1,9 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.ui.dashboard
+
+import com.example.autofeedmobile.ui.schedule.ScheduleTask
+import com.example.autofeedmobile.ui.schedule.ScheduleDetailContent
+import com.example.autofeedmobile.util.formatTimeOnly
+
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -66,7 +71,10 @@ fun DashboardScreen(
                 val today = apiDateFormatter.format(Date())
                 val scheduleResponse = RetrofitClient.instance.getSchedulesByDate(userId, today)
                 if (scheduleResponse.isSuccessful) {
-                    schedules = scheduleResponse.body()?.data ?: emptyList()
+                    schedules = (scheduleResponse.body()?.data ?: emptyList())
+                        .filter { !it.status.equals("Disabled", ignoreCase = true) }
+                        .sortedWith(compareBy<ScheduleData> { it.status.equals("Completed", ignoreCase = true) }
+                            .thenBy { it.startTime })
                 }
                 
                 // Fetch Inventory for Summary

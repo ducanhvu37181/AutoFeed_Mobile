@@ -1,4 +1,4 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.util
 
 fun formatTimeOnly(timeString: String?): String {
     if (timeString == null) return "N/A"

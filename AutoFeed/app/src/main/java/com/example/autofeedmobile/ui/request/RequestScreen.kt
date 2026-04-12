@@ -1,4 +1,4 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.ui.request
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,13 +23,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.autofeedmobile.network.ReportData
+import com.example.autofeedmobile.network.InventoryData
+import com.example.autofeedmobile.network.RequestData
 import com.example.autofeedmobile.network.RetrofitClient
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportScreen(
+fun RequestScreen(
     userId: Int,
     userFullName: String,
     userAvatarUrl: String? = null,
@@ -41,51 +42,39 @@ fun ReportScreen(
     onNavigateToNotifications: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    
-    val scope = rememberCoroutineScope()
-    var reports by remember { mutableStateOf<List<ReportData>>(emptyList()) }
-    var inventoryList by remember { mutableStateOf<List<com.example.autofeedmobile.network.InventoryData>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
+    var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Pending", "Approved", "Rejected")
 
-    var searchQuery by remember { mutableStateOf("") }
-
-    val filteredReports = reports.filter { report ->
-        val matchesFilter = if (selectedFilter == "All") true
-        else report.status.equals(selectedFilter, ignoreCase = true) ||
-                (selectedFilter == "Approved" && report.status.equals("completed", ignoreCase = true))
-        val matchesSearch = report.type.contains(searchQuery, ignoreCase = true) ||
-                report.description.contains(searchQuery, ignoreCase = true)
-        matchesFilter && matchesSearch
-    }.sortedByDescending { it.createDate }
+    val scope = rememberCoroutineScope()
+    var requests by remember { mutableStateOf<List<RequestData>>(emptyList()) }
+    var inventoryList by remember { mutableStateOf<List<InventoryData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Detail state
-    var selectedReportDetail by remember { mutableStateOf<ReportData?>(null) }
+    var selectedRequestDetail by remember { mutableStateOf<RequestData?>(null) }
     var showDetailBottomSheet by remember { mutableStateOf(false) }
     var showCreateBottomSheet by remember { mutableStateOf(false) }
-    
+
     val detailSheetState = rememberModalBottomSheetState()
     val createSheetState = rememberModalBottomSheetState()
 
-    fun fetchReports() {
+    fun fetchRequests() {
         isLoading = true
         scope.launch {
             try {
-                val response = RetrofitClient.instance.getReports(userId)
+                val response = RetrofitClient.instance.getRequests(userId)
                 if (response.isSuccessful) {
-                    reports = response.body()?.data ?: emptyList()
-                    errorMessage = null
+                    requests = response.body()?.data ?: emptyList()
                 } else {
-                    errorMessage = "Failed to load reports"
+                    errorMessage = "Failed to load requests"
                 }
 
-                // Also fetch inventory for notifications
-                val invResponse = RetrofitClient.instance.getInventory()
-                if (invResponse.isSuccessful) {
-                    inventoryList = invResponse.body()?.data ?: emptyList()
+                // Fetch inventory for the notification dot
+                val inventoryResponse = RetrofitClient.instance.getInventory()
+                if (inventoryResponse.isSuccessful) {
+                    inventoryList = inventoryResponse.body()?.data ?: emptyList()
                 }
             } catch (e: Exception) {
                 errorMessage = "Network error: ${e.localizedMessage}"
@@ -96,8 +85,16 @@ fun ReportScreen(
     }
 
     LaunchedEffect(userId) {
-        fetchReports()
+        fetchRequests()
     }
+
+    val filteredRequests = requests.filter { request ->
+        val matchesFilter = if (selectedFilter == "All") true 
+                            else request.status.equals(selectedFilter, ignoreCase = true)
+        val matchesSearch = request.type.contains(searchQuery, ignoreCase = true) || 
+                            request.description.contains(searchQuery, ignoreCase = true)
+        matchesFilter && matchesSearch
+    }.sortedByDescending { it.createdAt }
 
     Scaffold(
         topBar = {
@@ -105,7 +102,7 @@ fun ReportScreen(
                 title = {
                     Column {
                         Text("AutoFeed", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("My Reports", color = Color.White, fontSize = 14.sp)
+                        Text("My Requests", color = Color.White, fontSize = 14.sp)
                     }
                 },
                 navigationIcon = {
@@ -249,7 +246,7 @@ fun ReportScreen(
                 contentColor = Color.White,
                 shape = CircleShape
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Report")
+                Icon(Icons.Default.Add, contentDescription = "Add Request")
             }
         }
     ) { innerPadding ->
@@ -266,17 +263,17 @@ fun ReportScreen(
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ReportSummaryCard(modifier = Modifier.weight(1f), label = "Total", value = reports.size.toString())
-                ReportSummaryCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Pending",
-                    value = reports.count { it.status.equals("Pending", ignoreCase = true) }.toString(),
+                RequestSummaryCard(modifier = Modifier.weight(1f), label = "Total", value = requests.size.toString())
+                RequestSummaryCard(
+                    modifier = Modifier.weight(1f), 
+                    label = "Pending", 
+                    value = requests.count { it.status.equals("Pending", ignoreCase = true) }.toString(), 
                     valueColor = Color(0xFFFFA000)
                 )
-                ReportSummaryCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Approved",
-                    value = reports.count { it.status.equals("Approved", ignoreCase = true) || it.status.equals("completed", ignoreCase = true) }.toString(),
+                RequestSummaryCard(
+                    modifier = Modifier.weight(1f), 
+                    label = "Approved", 
+                    value = requests.count { it.status.equals("Approved", ignoreCase = true) }.toString(), 
                     valueColor = Color(0xFF43A047)
                 )
             }
@@ -294,14 +291,14 @@ fun ReportScreen(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search reports...") },
+                        placeholder = { Text("Search requests...") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true
                     )
-
+                    
                     Spacer(modifier = Modifier.height(12.dp))
-
+                    
                     ScrollableTabRow(
                         selectedTabIndex = filters.indexOf(selectedFilter),
                         edgePadding = 0.dp,
@@ -321,7 +318,7 @@ fun ReportScreen(
                 }
             }
 
-            // Report List
+            // Request List
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFF00897B))
@@ -330,17 +327,14 @@ fun ReportScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(errorMessage!!, color = Color.Red)
-                        Button(onClick = { fetchReports() }, modifier = Modifier.padding(top = 8.dp)) {
+                        Button(onClick = { fetchRequests() }, modifier = Modifier.padding(top = 8.dp)) {
                             Text("Retry")
                         }
                     }
                 }
-            } else if (filteredReports.isEmpty()) {
+            } else if (filteredRequests.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        if (selectedFilter == "All") "No reports found" else "No $selectedFilter reports found", 
-                        color = Color.Gray
-                    )
+                    Text("No requests found", color = Color.Gray)
                 }
             } else {
                 LazyColumn(
@@ -348,11 +342,11 @@ fun ReportScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(filteredReports) { report ->
-                        ReportItem(
-                            report = report,
+                    items(filteredRequests) { request ->
+                        RequestItem(
+                            request = request,
                             onClick = {
-                                selectedReportDetail = report
+                                selectedRequestDetail = request
                                 showDetailBottomSheet = true
                             }
                         )
@@ -362,20 +356,19 @@ fun ReportScreen(
         }
     }
 
-    if (showDetailBottomSheet && selectedReportDetail != null) {
+    // Detail Bottom Sheet
+    if (showDetailBottomSheet && selectedRequestDetail != null) {
         ModalBottomSheet(
-            onDismissRequest = { 
-                showDetailBottomSheet = false 
-                selectedReportDetail = null
-            },
+            onDismissRequest = { showDetailBottomSheet = false },
             sheetState = detailSheetState,
             containerColor = Color.White,
             dragHandle = null
         ) {
-            ReportDetailContent(reportId = selectedReportDetail!!.reportId)
+            RequestDetailContent(requestId = selectedRequestDetail!!.requestId)
         }
     }
 
+    // Create Bottom Sheet
     if (showCreateBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showCreateBottomSheet = false },
@@ -383,11 +376,11 @@ fun ReportScreen(
             containerColor = Color.White,
             dragHandle = null
         ) {
-            SendReportContent(
+            SendRequestContent(
                 userId = userId,
                 onSuccess = {
                     showCreateBottomSheet = false
-                    fetchReports()
+                    fetchRequests()
                 },
                 onCancel = { showCreateBottomSheet = false }
             )
@@ -396,7 +389,7 @@ fun ReportScreen(
 }
 
 @Composable
-fun ReportSummaryCard(
+fun RequestSummaryCard(
     modifier: Modifier = Modifier,
     label: String,
     value: String,
@@ -423,8 +416,8 @@ fun ReportSummaryCard(
 }
 
 @Composable
-fun ReportItem(
-    report: ReportData,
+fun RequestItem(
+    request: RequestData,
     onClick: () -> Unit
 ) {
     Card(
@@ -444,53 +437,52 @@ fun ReportItem(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(getReportColor(report.type).copy(alpha = 0.1f)),
+                    .background(getRequestColor(request.type).copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    getReportIcon(report.type),
+                    getRequestIcon(request.type),
                     contentDescription = null,
-                    tint = getReportColor(report.type)
+                    tint = getRequestColor(request.type)
                 )
             }
-
+            
             Spacer(modifier = Modifier.width(16.dp))
-
+            
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = report.type,
+                    text = request.type,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
                 Text(
-                    text = report.description,
+                    text = request.description,
                     fontSize = 14.sp,
                     color = Color.Gray,
                     maxLines = 1
                 )
             }
-
-            ReportStatusChip(status = report.status)
+            
+            StatusChip(status = request.status)
         }
     }
 }
 
 @Composable
-fun ReportStatusChip(status: String) {
+fun StatusChip(status: String) {
     val (backgroundColor, textColor) = when (status.lowercase()) {
-        "completed", "approved" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+        "approved" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
         "pending" -> Color(0xFFFFF8E1) to Color(0xFFF57C00)
         "rejected" -> Color(0xFFFFEBEE) to Color(0xFFC62828)
         else -> Color(0xFFF5F5F5) to Color(0xFF616161)
     }
-
+    
     Surface(
         color = backgroundColor,
         shape = RoundedCornerShape(16.dp)
     ) {
-        val displayStatus = if (status.equals("completed", ignoreCase = true)) "Approved" else status
         Text(
-            text = displayStatus.replaceFirstChar { it.uppercase() },
+            text = status,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
@@ -499,14 +491,14 @@ fun ReportStatusChip(status: String) {
     }
 }
 
-fun getReportIcon(type: String) = when (type.lowercase()) {
+fun getRequestIcon(type: String) = when (type.lowercase()) {
     "feed" -> Icons.Default.Pets
     "maintenance" -> Icons.Default.Build
     "medical" -> Icons.Default.MedicalServices
     else -> Icons.Default.Description
 }
 
-fun getReportColor(type: String) = when (type.lowercase()) {
+fun getRequestColor(type: String) = when (type.lowercase()) {
     "feed" -> Color(0xFF4CAF50)
     "maintenance" -> Color(0xFF2196F3)
     "medical" -> Color(0xFFF44336)
@@ -515,6 +507,6 @@ fun getReportColor(type: String) = when (type.lowercase()) {
 
 @Preview(showBackground = true)
 @Composable
-fun ReportScreenPreview() {
-    ReportScreen(userId = 1, userFullName = "John Doe", userAvatarUrl = null)
+fun RequestScreenPreview() {
+    RequestScreen(userId = 1, userFullName = "John Doe")
 }

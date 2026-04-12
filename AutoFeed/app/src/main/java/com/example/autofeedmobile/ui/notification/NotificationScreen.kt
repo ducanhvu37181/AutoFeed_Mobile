@@ -1,4 +1,4 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.ui.notification
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

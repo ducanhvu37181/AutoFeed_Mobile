@@ -1,4 +1,7 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.ui.notification
+
+import com.example.autofeedmobile.MainActivity
+
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

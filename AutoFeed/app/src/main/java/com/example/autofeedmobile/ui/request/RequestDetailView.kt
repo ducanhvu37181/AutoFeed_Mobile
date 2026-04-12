@@ -1,4 +1,4 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.ui.request
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
@@ -23,29 +25,29 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.RetrofitClient
-import com.example.autofeedmobile.network.ReportData
+import com.example.autofeedmobile.network.RequestData
 
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportDetailContent(
-    reportId: Int
+fun RequestDetailContent(
+    requestId: Int
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-    var report by remember { mutableStateOf<ReportData?>(null) }
+    var request by remember { mutableStateOf<RequestData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(reportId) {
+    LaunchedEffect(requestId) {
         try {
-            val response = RetrofitClient.instance.getReportDetail(reportId)
+            val response = RetrofitClient.instance.getRequestDetail(requestId)
             if (response.isSuccessful) {
-                report = response.body()?.data
+                request = response.body()?.data
             } else {
-                errorMessage = "Failed to load report details: ${response.code()}"
+                errorMessage = "Failed to load request details: ${response.code()}"
             }
         } catch (e: Exception) {
             errorMessage = "Error: ${e.localizedMessage}"
@@ -62,8 +64,8 @@ fun ReportDetailContent(
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(text = errorMessage!!, color = Color.Red)
         }
-    } else if (report != null) {
-        val currentReport = report!!
+    } else if (request != null) {
+        val currentRequest = request!!
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -90,37 +92,25 @@ fun ReportDetailContent(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Report Details",
+                        text = currentRequest.type,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1A1A1A)
                     )
                     Text(
-                        text = "Ref: #${currentReport.reportId}",
+                        text = "Ref: #${currentRequest.requestId}",
                         fontSize = 14.sp,
                         color = Color.Gray
                     )
                 }
                 
-                val statusColor = when (currentReport.status.lowercase()) {
-                    "pending" -> Color(0xFFFFF8E1)
-                    "completed", "approved" -> Color(0xFFE8F5E9)
-                    "rejected" -> Color(0xFFFFEBEE)
-                    else -> Color(0xFFF5F5F5)
-                }
-                val statusTextColor = when (currentReport.status.lowercase()) {
-                    "pending" -> Color(0xFFFFA000)
-                    "completed", "approved" -> Color(0xFF00C853)
-                    "rejected" -> Color(0xFFD32F2F)
-                    else -> Color(0xFF757575)
-                }
-
+                val (statusColor, statusTextColor) = getStatusColors(currentRequest.status)
                 Surface(
                     color = statusColor,
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Text(
-                        text = currentReport.status.replaceFirstChar { it.uppercase() },
+                        text = currentRequest.status,
                         color = statusTextColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -136,17 +126,17 @@ fun ReportDetailContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ReportDetailCard(
+                DetailInfoCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Category,
                     label = "Type",
-                    value = currentReport.type
+                    value = currentRequest.type
                 )
-                ReportDetailCard(
+                DetailInfoCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.CalendarToday,
                     label = "Date",
-                    value = currentReport.createDate.split("T")[0]
+                    value = currentRequest.createdAt.split("T")[0]
                 )
             }
 
@@ -168,7 +158,7 @@ fun ReportDetailContent(
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = currentReport.description,
+                    text = currentRequest.description,
                     fontSize = 14.sp,
                     color = Color(0xFF455A64),
                     modifier = Modifier.padding(16.dp),
@@ -176,7 +166,7 @@ fun ReportDetailContent(
                 )
             }
 
-            if (!currentReport.fileUrl.isNullOrBlank()) {
+            if (!currentRequest.fileUrl.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(24.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -189,8 +179,8 @@ fun ReportDetailContent(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1A1A1A)
                     )
-
-                    val fullUrl = RetrofitClient.getFullUrl(currentReport.fileUrl) ?: ""
+                    
+                    val fullUrl = RetrofitClient.getFullUrl(currentRequest.fileUrl) ?: ""
                     TextButton(
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(fullUrl))
@@ -208,7 +198,7 @@ fun ReportDetailContent(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     AsyncImage(
-                        model = RetrofitClient.getFullUrl(currentReport.fileUrl),
+                        model = RetrofitClient.getFullUrl(currentRequest.fileUrl),
                         contentDescription = "Attachment",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -222,11 +212,12 @@ fun ReportDetailContent(
 }
 
 @Composable
-fun ReportDetailCard(
+fun DetailInfoCard(
     modifier: Modifier = Modifier,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    value: String
+    value: String,
+    valueColor: Color = Color(0xFF1A1A1A)
 ) {
     Card(
         modifier = modifier,
@@ -251,10 +242,25 @@ fun ReportDetailCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = value,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A1A)
+                color = valueColor
             )
         }
     }
+}
+
+private fun getStatusColors(status: String): Pair<Color, Color> {
+    return when (status.lowercase()) {
+        "pending" -> Pair(Color(0xFFFFF8E1), Color(0xFFFFA000))
+        "approved" -> Pair(Color(0xFFE8F5E9), Color(0xFF00C853))
+        "rejected" -> Pair(Color(0xFFFFEBEE), Color(0xFFD32F2F))
+        else -> Pair(Color(0xFFF5F5F5), Color(0xFF757575))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RequestDetailPreview() {
+    // Preview removed as it requires fetching data
 }

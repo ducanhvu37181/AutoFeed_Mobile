@@ -1,9 +1,10 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.ui.notification
 
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.autofeedmobile.data.SessionManager
 import com.example.autofeedmobile.network.RetrofitClient
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

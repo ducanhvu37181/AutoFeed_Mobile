@@ -1,4 +1,4 @@
-package com.example.autofeedmobile
+package com.example.autofeedmobile.data
 
 import android.content.Context
 import android.content.SharedPreferences
