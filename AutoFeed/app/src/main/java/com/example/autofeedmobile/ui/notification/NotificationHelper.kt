@@ -16,19 +16,36 @@ object NotificationHelper {
     private const val CHANNEL_NAME = "AutoFeed Notifications"
     private const val CHANNEL_DESC = "Notifications for schedules, inventory, and reports"
 
-    private const val PREFS_NAME = "notification_prefs"
+    private const val PREFS_NAME = "notification_prefs_v2"
 
+    /**
+     * Checks if we should notify for a given key.
+     * Prevents "spam" by ensuring the same item/status doesn't notify twice in the same minute.
+     * For status changes, we generally only notify once ever per state.
+     */
     fun shouldNotify(context: Context, key: String): Boolean {
-        // Return true always for status changes/schedules if we want "always pop-up"
-        // But we still need to prevent spamming the SAME notification repeatedly.
-        // We'll use the key but maybe expire it or use a more specific key.
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return !prefs.getBoolean(key, false)
+        val lastNotified = prefs.getLong(key, 0L)
+        val now = System.currentTimeMillis()
+
+        // If never notified, we should notify.
+        if (lastNotified == 0L) return true
+
+        // Spam protection: Ensure the same item/status doesn't notify twice in the same minute.
+        if (now - lastNotified < 60000) {
+            return false
+        }
+
+        // For most of our current keys (status-specific like "req_123_approved"), 
+        // we only want to notify ONCE ever. If it's already been notified (lastNotified > 0)
+        // and we reached here, it means more than a minute has passed. 
+        // We still return false to avoid repeated notifications for the same persistent state.
+        return false
     }
 
     fun markAsNotified(context: Context, key: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(key, true).apply()
+        prefs.edit().putLong(key, System.currentTimeMillis()).apply()
     }
 
     fun createNotificationChannel(context: Context) {

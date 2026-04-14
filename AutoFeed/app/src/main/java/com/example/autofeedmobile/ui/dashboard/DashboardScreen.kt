@@ -31,6 +31,7 @@ import com.example.autofeedmobile.network.InventoryData
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.ScheduleData
 import com.example.autofeedmobile.network.ReportData
+import com.example.autofeedmobile.network.RequestData
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -45,12 +46,15 @@ fun DashboardScreen(
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
-    onNavigateToNotifications: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToRequests: () -> Unit = {},
+    onNavigateToReports: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
     var inventoryList by remember { mutableStateOf<List<InventoryData>>(emptyList()) }
     var reports by remember { mutableStateOf<List<ReportData>>(emptyList()) }
+    var requests by remember { mutableStateOf<List<RequestData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
@@ -65,6 +69,23 @@ fun DashboardScreen(
     var isDetailLoading by remember { mutableStateOf(false) }
 
     val apiDateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    val fullDateFormatter = remember { SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()) }
+
+    fun isRecent(dateString: String?): Boolean {
+        if (dateString == null) return false
+        return try {
+            val date = if (dateString.contains("T")) {
+                fullDateFormatter.parse(dateString)
+            } else {
+                apiDateFormatter.parse(dateString)
+            }
+            val now = Calendar.getInstance()
+            val twoDaysAgo = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -2) }
+            date?.after(twoDaysAgo.time) == true
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     fun fetchDashboardData() {
         isLoading = true
@@ -90,6 +111,12 @@ fun DashboardScreen(
                 val reportResponse = RetrofitClient.instance.getReports(userId)
                 if (reportResponse.isSuccessful) {
                     reports = reportResponse.body()?.data ?: emptyList()
+                }
+
+                // Fetch Requests for Summary
+                val requestResponse = RetrofitClient.instance.getRequests(userId)
+                if (requestResponse.isSuccessful) {
+                    requests = requestResponse.body()?.data ?: emptyList()
                 }
             } catch (e: Exception) {
                 // handle error
@@ -272,7 +299,7 @@ fun DashboardScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SummaryCard(
-                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToProfile),
+                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToReports),
                                 icon = Icons.Default.Assessment,
                                 iconContainerColor = Color(0xFF1DB954).copy(alpha = 0.1f),
                                 iconColor = Color(0xFF1DB954),
@@ -298,36 +325,13 @@ fun DashboardScreen(
                                 label = "Today Schedules"
                             )
                             SummaryCard(
-                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToInventory),
-                                icon = Icons.Default.Warning,
+                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToRequests),
+                                icon = Icons.Default.ChatBubbleOutline,
                                 iconContainerColor = Color(0xFFFF5722).copy(alpha = 0.1f),
                                 iconColor = Color(0xFFFF5722),
-                                value = "$criticalStockCount",
-                                label = "Critical Items"
+                                value = "${requests.size}",
+                                label = "My Request"
                             )
-                        }
-                    }
-                }
-
-                // Tasks Section (replaces Notifications)
-                item {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Recent Tasks", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Check your schedule and inventory regularly to stay updated.", fontSize = 14.sp, color = Color.Gray)
-                            }
                         }
                     }
                 }
@@ -441,6 +445,104 @@ fun DashboardScreen(
                                     trackColor = Color(0xFFE0F2F1),
                                     strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                                 )
+                            }
+                        }
+                    }
+                }
+
+                // Recent Requests Section
+                item {
+                    val recentRequests = requests.filter { isRecent(it.createdAt) }
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Recent Requests", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            TextButton(onClick = onNavigateToRequests) {
+                                Text("View All", color = Color(0xFF00897B))
+                            }
+                        }
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            if (isLoading) {
+                                Box(modifier = Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = Color(0xFF00897B))
+                                }
+                            } else if (recentRequests.isEmpty()) {
+                                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                    Text("No recent requests", color = Color.Gray)
+                                }
+                            } else {
+                                Column {
+                                    recentRequests.take(3).forEachIndexed { index, request ->
+                                        DashboardNotificationItem(
+                                            title = request.type,
+                                            message = request.description,
+                                            color = Color.White,
+                                            indicatorColor = when (request.status.lowercase()) {
+                                                "approved" -> Color(0xFF00C853)
+                                                "pending" -> Color(0xFFFFA000)
+                                                else -> Color(0xFFD32F2F)
+                                            },
+                                            onClick = onNavigateToRequests
+                                        )
+                                        if (index < recentRequests.take(3).size - 1) {
+                                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Recent Reports Section
+                item {
+                    val recentReports = reports.filter { isRecent(it.createDate) }
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Recent Reports", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            TextButton(onClick = onNavigateToReports) {
+                                Text("View All", color = Color(0xFF00897B))
+                            }
+                        }
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            if (isLoading) {
+                                Box(modifier = Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = Color(0xFF00897B))
+                                }
+                            } else if (recentReports.isEmpty()) {
+                                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                    Text("No recent reports", color = Color.Gray)
+                                }
+                            } else {
+                                Column {
+                                    recentReports.take(3).forEachIndexed { index, report ->
+                                        DashboardNotificationItem(
+                                            title = report.type,
+                                            message = report.description,
+                                            color = Color.White,
+                                            indicatorColor = Color(0xFF00897B),
+                                            onClick = onNavigateToReports
+                                        )
+                                        if (index < recentReports.take(3).size - 1) {
+                                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

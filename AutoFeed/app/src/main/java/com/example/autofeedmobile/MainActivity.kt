@@ -132,7 +132,9 @@ class MainActivity : ComponentActivity() {
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
+                            onNavigateToRequests = { currentScreen = Screen.Requests },
+                            onNavigateToReports = { currentScreen = Screen.Reports }
                         )
                     }
                     Screen.Inventory -> {
