@@ -11,7 +11,7 @@ import java.time.format.DateTimeFormatter
 
 class NotificationWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        Log.d("NotificationWorker", "Worker started")
+        Log.d("NotificationWorker", "Worker started at ${java.time.LocalTime.now()}")
         val sessionManager = SessionManager(applicationContext)
         val user = sessionManager.fetchUser() ?: run {
             Log.d("NotificationWorker", "No user found in session")

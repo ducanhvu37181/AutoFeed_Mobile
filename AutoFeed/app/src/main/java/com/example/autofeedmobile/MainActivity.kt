@@ -81,6 +81,26 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(userId) {
+                    if (userId != -1) {
+                        // Immediate check on login/start
+                        val immediateWork = OneTimeWorkRequestBuilder<NotificationWorker>()
+                            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                            .build()
+                        WorkManager.getInstance(context).enqueue(immediateWork)
+
+                        // Periodic check while app is in foreground (every 1 minute for "always" feel)
+                        while (true) {
+                            kotlinx.coroutines.delay(60000)
+                            val periodicWork = OneTimeWorkRequestBuilder<NotificationWorker>()
+                                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                                .build()
+                            WorkManager.getInstance(context).enqueue(periodicWork)
+                        }
+                    }
+                }
+
                 when (currentScreen) {
                     Screen.Login -> {
                         LoginScreen(
@@ -112,7 +132,9 @@ class MainActivity : ComponentActivity() {
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
+                            onNavigateToRequests = { currentScreen = Screen.Requests },
+                            onNavigateToReports = { currentScreen = Screen.Reports }
                         )
                     }
                     Screen.Inventory -> {

@@ -29,10 +29,12 @@ import java.io.FileOutputStream
 @Composable
 fun SendRequestContent(
     userId: Int,
+    initialType: String = "",
+    canEditType: Boolean = true,
     onSuccess: () -> Unit = {},
     onCancel: () -> Unit = {}
 ) {
-    var type by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf(initialType) }
     var description by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -92,8 +94,9 @@ fun SendRequestContent(
         )
         OutlinedTextField(
             value = type,
-            onValueChange = { type = it },
+            onValueChange = { if (canEditType) type = it },
             modifier = Modifier.fillMaxWidth(),
+            readOnly = !canEditType,
             placeholder = { Text("e.g. Inventory, Maintenance", color = Color.Gray) },
             shape = RoundedCornerShape(8.dp),
             singleLine = true,

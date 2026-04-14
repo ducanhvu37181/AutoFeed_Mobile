@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.InventoryData
 import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.ui.report.SendReportContent
+import com.example.autofeedmobile.ui.request.SendRequestContent
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,6 +52,13 @@ fun InventoryScreen(
     var selectedItem by remember { mutableStateOf<InventoryData?>(null) }
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
+
+    // Quick Actions State
+    var showQuickActions by remember { mutableStateOf(false) }
+    var showQuickRequestSheet by remember { mutableStateOf(false) }
+    var showQuickReportSheet by remember { mutableStateOf(false) }
+    val quickRequestSheetState = rememberModalBottomSheetState()
+    val quickReportSheetState = rememberModalBottomSheetState()
 
     fun fetchInventory() {
         isLoading = true
@@ -215,13 +224,45 @@ fun InventoryScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { },
-                containerColor = Color(0xFF00897B),
-                contentColor = Color.White,
-                shape = CircleShape
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Item")
+                if (showQuickActions) {
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            showQuickReportSheet = true
+                            showQuickActions = false
+                        },
+                        icon = { Icon(Icons.Default.Description, contentDescription = null) },
+                        text = { Text("Quick Report") },
+                        containerColor = Color.White,
+                        contentColor = Color(0xFF00897B),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            showQuickRequestSheet = true
+                            showQuickActions = false
+                        },
+                        icon = { Icon(Icons.Default.Assignment, contentDescription = null) },
+                        text = { Text("Quick Request") },
+                        containerColor = Color.White,
+                        contentColor = Color(0xFF00897B),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                }
+                FloatingActionButton(
+                    onClick = { showQuickActions = !showQuickActions },
+                    containerColor = Color(0xFF00897B),
+                    contentColor = Color.White,
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        if (showQuickActions) Icons.Default.Close else Icons.Default.Add,
+                        contentDescription = "Quick Actions"
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -333,6 +374,48 @@ fun InventoryScreen(
                 dragHandle = null
             ) {
                 InventoryDetailContent(item = selectedItem!!)
+            }
+        }
+
+        // Quick Request Sheet
+        if (showQuickRequestSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showQuickRequestSheet = false },
+                sheetState = quickRequestSheetState,
+                containerColor = Color.White,
+                dragHandle = null
+            ) {
+                SendRequestContent(
+                    userId = userId,
+                    initialType = "Inventory",
+                    canEditType = false,
+                    onSuccess = {
+                        showQuickRequestSheet = false
+                        fetchInventory()
+                    },
+                    onCancel = { showQuickRequestSheet = false }
+                )
+            }
+        }
+
+        // Quick Report Sheet
+        if (showQuickReportSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showQuickReportSheet = false },
+                sheetState = quickReportSheetState,
+                containerColor = Color.White,
+                dragHandle = null
+            ) {
+                SendReportContent(
+                    userId = userId,
+                    initialType = "Inventory",
+                    canEditType = false,
+                    onSuccess = {
+                        showQuickReportSheet = false
+                        fetchInventory()
+                    },
+                    onCancel = { showQuickReportSheet = false }
+                )
             }
         }
     }
