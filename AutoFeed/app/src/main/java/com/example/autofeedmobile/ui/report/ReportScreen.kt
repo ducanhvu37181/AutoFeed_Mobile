@@ -49,14 +49,14 @@ fun ReportScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     var selectedFilter by remember { mutableStateOf("All") }
-    val filters = listOf("All", "Pending", "Approved", "Rejected")
+    val filters = listOf("All", "Pending", "Reviewed", "Rejected")
 
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredReports = reports.filter { report ->
         val matchesFilter = if (selectedFilter == "All") true
         else report.status.equals(selectedFilter, ignoreCase = true) ||
-                (selectedFilter == "Approved" && report.status.equals("completed", ignoreCase = true))
+                (selectedFilter == "Reviewed" && (report.status.equals("completed", ignoreCase = true) || report.status.equals("approved", ignoreCase = true) || report.status.equals("reviewed", ignoreCase = true)))
         val matchesSearch = report.type.contains(searchQuery, ignoreCase = true) ||
                 report.description.contains(searchQuery, ignoreCase = true)
         matchesFilter && matchesSearch
@@ -275,8 +275,12 @@ fun ReportScreen(
                 )
                 ReportSummaryCard(
                     modifier = Modifier.weight(1f),
-                    label = "Approved",
-                    value = reports.count { it.status.equals("Approved", ignoreCase = true) || it.status.equals("completed", ignoreCase = true) }.toString(),
+                    label = "Reviewed",
+                    value = reports.count { 
+                        it.status.equals("Reviewed", ignoreCase = true) || 
+                        it.status.equals("Approved", ignoreCase = true) || 
+                        it.status.equals("completed", ignoreCase = true) 
+                    }.toString(),
                     valueColor = Color(0xFF43A047)
                 )
             }
@@ -478,7 +482,7 @@ fun ReportItem(
 @Composable
 fun ReportStatusChip(status: String) {
     val (backgroundColor, textColor) = when (status.lowercase()) {
-        "completed", "approved" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+        "completed", "approved", "reviewed" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
         "pending" -> Color(0xFFFFF8E1) to Color(0xFFF57C00)
         "rejected" -> Color(0xFFFFEBEE) to Color(0xFFC62828)
         else -> Color(0xFFF5F5F5) to Color(0xFF616161)
@@ -488,7 +492,10 @@ fun ReportStatusChip(status: String) {
         color = backgroundColor,
         shape = RoundedCornerShape(16.dp)
     ) {
-        val displayStatus = if (status.equals("completed", ignoreCase = true)) "Approved" else status
+        val displayStatus = when {
+            status.equals("completed", ignoreCase = true) || status.equals("approved", ignoreCase = true) -> "Reviewed"
+            else -> status
+        }
         Text(
             text = displayStatus.replaceFirstChar { it.uppercase() },
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
