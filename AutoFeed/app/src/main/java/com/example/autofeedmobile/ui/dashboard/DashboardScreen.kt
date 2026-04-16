@@ -14,9 +14,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ElectricBolt
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -150,6 +160,11 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToProfile) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
                 title = {
                     Column {
                         Text("AutoFeed", color = Color.White, fontWeight = FontWeight.Bold)
@@ -171,54 +186,31 @@ fun DashboardScreen(
                             )
                         }
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clickable { showMenu = true }
+                            .padding(end = 12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = userFullName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                        if (!avatarUrlKey.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = avatarUrlKey,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = "Farmer",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Profile",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (!avatarUrlKey.isNullOrEmpty()) {
-                                AsyncImage(
-                                    model = avatarUrlKey,
-                                    contentDescription = "User Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop,
-                                    onError = { error ->
-                                        android.util.Log.e("Coil", "Dashboard Avatar Load Error: ${error.result.throwable.message}")
-                                    }
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Menu",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
+
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
@@ -491,7 +483,8 @@ fun DashboardScreen(
                                             indicatorColor = when (request.status.lowercase()) {
                                                 "approved" -> Color(0xFF00C853)
                                                 "pending" -> Color(0xFFFFA000)
-                                                else -> Color(0xFFD32F2F)
+                                                "rejected" -> Color(0xFFD32F2F)
+                                                else -> Color.Gray
                                             },
                                             onClick = {
                                                 selectedRequestId = request.requestId
@@ -542,7 +535,12 @@ fun DashboardScreen(
                                             title = report.type,
                                             message = report.description,
                                             color = Color.White,
-                                            indicatorColor = Color(0xFF00897B),
+                                            indicatorColor = when (report.status.lowercase()) {
+                                                "reviewed", "completed", "approved" -> Color(0xFF00C853)
+                                                "pending" -> Color(0xFFFFA000)
+                                                "rejected" -> Color(0xFFD32F2F)
+                                                else -> Color.Gray
+                                            },
                                             onClick = {
                                                 selectedReportId = report.reportId
                                                 showBottomSheet = true

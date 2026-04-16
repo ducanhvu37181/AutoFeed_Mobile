@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.ScheduleData
@@ -155,50 +156,29 @@ fun ScheduleScreen(
                             )
                         }
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clickable { showMenu = true }
+                            .padding(end = 12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = userFullName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = userAvatarUrl,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = "Farmer",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = userAvatarUrl,
-                                    contentDescription = "User Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Menu",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -565,7 +545,10 @@ fun ScheduleItem(
                     .padding(16.dp)
                     .weight(1f)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     if (isCompleted) {
                         Icon(
                             Icons.Default.CheckCircle,
@@ -590,7 +573,14 @@ fun ScheduleItem(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     
                     val priorityColor = when (priority.lowercase()) {
@@ -615,14 +605,19 @@ fun ScheduleItem(
                             color = priorityTextColor,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(Icons.Default.AccessTime, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                     Text(time, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
                     Spacer(modifier = Modifier.width(16.dp))

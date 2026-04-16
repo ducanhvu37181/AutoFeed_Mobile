@@ -125,50 +125,29 @@ fun RequestScreen(
                             )
                         }
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clickable { showMenu = true }
+                            .padding(end = 12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = userFullName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = userAvatarUrl,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = "Farmer",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = userAvatarUrl,
-                                    contentDescription = "User Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Menu",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -482,7 +461,7 @@ fun StatusChip(status: String) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Text(
-            text = status,
+            text = status.replaceFirstChar { it.uppercase() },
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,

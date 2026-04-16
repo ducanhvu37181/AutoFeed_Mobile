@@ -74,13 +74,16 @@ class NotificationWorker(context: Context, params: WorkerParameters) : Coroutine
             if (reqResponse.isSuccessful) {
                 reqResponse.body()?.data?.forEach { request ->
                     val status = request.status.lowercase()
-                    if (status == "approved" || status == "reviewed" || status == "rejected") {
+                    if (status == "approved" || status == "rejected") {
                         val key = "req_${request.requestId}_$status"
                         if (NotificationHelper.shouldNotify(applicationContext, key)) {
+                            val isRejected = status == "rejected"
+                            val title = if (isRejected) "Request Rejected" else "Request Approved"
+                            val displayStatus = if (isRejected) "rejected" else "approved"
                             NotificationHelper.showNotification(
                                 applicationContext,
-                                if (status == "rejected") "Request Rejected" else "Request Approved",
-                                "Your request for '${request.type}' is now $status",
+                                title,
+                                "Your request for '${request.type}' is now $displayStatus",
                                 request.requestId + 2000
                             )
                             NotificationHelper.markAsNotified(applicationContext, key)
@@ -94,13 +97,16 @@ class NotificationWorker(context: Context, params: WorkerParameters) : Coroutine
             if (repResponse.isSuccessful) {
                 repResponse.body()?.data?.forEach { report ->
                     val status = report.status.lowercase()
-                    if (status == "reviewed" || status == "approved" || status == "rejected") {
+                    if (status == "reviewed" || status == "approved" || status == "completed" || status == "rejected") {
                         val key = "rep_${report.reportId}_$status"
                         if (NotificationHelper.shouldNotify(applicationContext, key)) {
+                            val isRejected = status == "rejected"
+                            val title = if (isRejected) "Report Rejected" else "Report Reviewed"
+                            val displayStatus = if (isRejected) "rejected" else "Reviewed"
                             NotificationHelper.showNotification(
                                 applicationContext,
-                                if (status == "rejected") "Report Rejected" else "Report Approved",
-                                "Your report '${report.type}' is now $status",
+                                title,
+                                "Your report '${report.type}' is now $displayStatus",
                                 report.reportId + 3000
                             )
                             NotificationHelper.markAsNotified(applicationContext, key)

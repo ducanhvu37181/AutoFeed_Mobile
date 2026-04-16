@@ -101,10 +101,11 @@ fun NotificationScreen(
                 if (reportsResponse.isSuccessful) {
                     reportsResponse.body()?.data?.forEach { report ->
                         val status = report.status.lowercase()
-                        if (status == "reviewed" || status == "approved" || status == "rejected") {
+                        if (status == "reviewed" || status == "approved" || status == "completed" || status == "rejected") {
                             val isRejected = status == "rejected"
-                            val title = if (isRejected) "Report Rejected" else "Report Approved"
-                            val msg = "Your report '${report.type}' is $status"
+                            val title = if (isRejected) "Report Rejected" else "Report Reviewed"
+                            val displayStatus = if (status == "rejected") "rejected" else "Reviewed"
+                            val msg = "Your report '${report.type}' is $displayStatus"
                             newNotifications.add(AppNotification(title, msg, if (isRejected) Color(0xFFFFEBEE) else Color(0xFFE8F5E9), if (isRejected) Color.Red else Color(0xFF4CAF50), "Report"))
 
                             val key = "rep_${report.reportId}_$status"
@@ -120,10 +121,11 @@ fun NotificationScreen(
                 if (requestsResponse.isSuccessful) {
                     requestsResponse.body()?.data?.forEach { request ->
                         val status = request.status.lowercase()
-                        if (status == "reviewed" || status == "approved" || status == "rejected") {
+                        if (status == "approved" || status == "rejected") {
                             val isRejected = status == "rejected"
                             val title = if (isRejected) "Request Rejected" else "Request Approved"
-                            val msg = "Your request for '${request.type}' is $status"
+                            val displayStatus = if (status == "rejected") "rejected" else "approved"
+                            val msg = "Your request for '${request.type}' is $displayStatus"
                             newNotifications.add(AppNotification(title, msg, if (isRejected) Color(0xFFFFEBEE) else Color(0xFFE8F5E9), if (isRejected) Color.Red else Color(0xFF4CAF50), "Request"))
 
                             val key = "req_${request.requestId}_$status"
@@ -153,53 +155,32 @@ fun NotificationScreen(
                     }
                 },
                 actions = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clickable { showMenu = true }
+                            .padding(end = 12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = userFullName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                        if (!userAvatarUrl.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(userAvatarUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = "Farmer",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (!userAvatarUrl.isNullOrEmpty()) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(userAvatarUrl)
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = "User Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Menu",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,

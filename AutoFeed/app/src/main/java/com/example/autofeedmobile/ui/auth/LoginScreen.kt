@@ -1,5 +1,6 @@
 package com.example.autofeedmobile.ui.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,10 +28,10 @@ fun LoginScreen(
     onLoginSuccess: (UserResponse, String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
     
     val scope = rememberCoroutineScope()
 
@@ -86,15 +88,6 @@ fun LoginScreen(
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
-
-                if (errorMessage != null) {
-                    Text(
-                        text = errorMessage!!,
-                        color = Color.Red,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                }
 
                 // Email Field
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -160,24 +153,28 @@ fun LoginScreen(
                     onClick = {
                         if (email.isNotEmpty() && password.isNotEmpty()) {
                             isLoading = true
-                            errorMessage = null
                             scope.launch {
                                 try {
                                     val response = RetrofitClient.instance.login(email, password)
                                     val body = response.body()
                                     if (response.isSuccessful && body?.user != null && body.token != null) {
-                                        onLoginSuccess(body.user!!, body.token!!)
+                                        // Restrict access to Farmer role only (roleId 3)
+                                        if (body.user.roleId == 3) {
+                                            onLoginSuccess(body.user!!, body.token!!)
+                                        } else {
+                                            Toast.makeText(context, "Access Denied: Only Farmers can log in to this mobile app.", Toast.LENGTH_SHORT).show()
+                                        }
                                     } else {
-                                        errorMessage = "Login failed: Invalid credentials"
+                                        Toast.makeText(context, "Login failed: Please check the email and password", Toast.LENGTH_SHORT).show()
                                     }
                                 } catch (e: Exception) {
-                                    errorMessage = "Network error: ${e.localizedMessage}"
+                                    Toast.makeText(context, "Network error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                                 } finally {
                                     isLoading = false
                                 }
                             }
                         } else {
-                            errorMessage = "Please enter email and password"
+                            Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier
