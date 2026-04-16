@@ -8,14 +8,18 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.text.SimpleDateFormat
+import java.util.*
+import android.widget.Toast
 
 data class ScheduleTask(
     val title: String,
@@ -31,6 +35,7 @@ data class ScheduleTask(
 @Composable
 fun ScheduleDetailContent(
     task: ScheduleTask,
+    selectedDate: Calendar = Calendar.getInstance(),
     onStatusUpdate: (String) -> Unit = {}
 ) {
     Column(
@@ -189,11 +194,62 @@ fun ScheduleDetailContent(
 
         // Action Button
         if (task.status.equals("Pending", ignoreCase = true) || task.status.equals("In Progress", ignoreCase = true)) {
-            val buttonText = if (task.status.equals("Pending", ignoreCase = true)) "Begin Schedule" else "Mark as Complete"
-            val nextStatus = if (task.status.equals("Pending", ignoreCase = true)) "In Progress" else "Completed"
+            val context = LocalContext.current
+            val isPending = task.status.equals("Pending", ignoreCase = true)
+            val buttonText = if (isPending) "Begin Schedule" else "Mark as Complete"
+            val nextStatus = if (isPending) "In Progress" else "Completed"
             
             Button(
-                onClick = { onStatusUpdate(nextStatus) },
+                onClick = {
+                    if (isPending) {
+                        try {
+                            val apiDateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            val todayStr = apiDateFormatter.format(Date())
+                            val selectedDateStr = apiDateFormatter.format(selectedDate.time)
+
+                            if (selectedDateStr != todayStr) {
+                                if (selectedDate.time.after(Date())) {
+                                    Toast.makeText(context, "Cannot start a future schedule.", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Cannot start a past schedule.", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                                // task.time is "06:00 AM - 07:00 AM" or just "06:00 AM"
+                                val startTimeStr = task.time.split("-").first().trim()
+                                val endTimeStr = if (task.time.contains("-")) task.time.split("-").last().trim() else startTimeStr
+
+                                val startTime = timeFormat.parse(startTimeStr)
+                                val endTime = timeFormat.parse(endTimeStr)
+
+                                val calendar = Calendar.getInstance()
+                                val nowTimeStr = timeFormat.format(calendar.time)
+                                val nowTime = timeFormat.parse(nowTimeStr)
+
+                                if (nowTime != null && startTime != null && endTime != null) {
+                                    when {
+                                        nowTime.before(startTime) -> {
+                                            Toast.makeText(context, "Cannot start early. Please wait until $startTimeStr", Toast.LENGTH_SHORT).show()
+                                        }
+                                        nowTime.after(endTime) -> {
+                                            Toast.makeText(context, "Schedule time has passed. Please contact supervisor.", Toast.LENGTH_SHORT).show()
+                                        }
+                                        else -> {
+                                            onStatusUpdate(nextStatus)
+                                        }
+                                    }
+                                } else {
+                                    onStatusUpdate(nextStatus)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Fallback if parsing fails
+                            onStatusUpdate(nextStatus)
+                        }
+                    } else {
+                        onStatusUpdate(nextStatus)
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),

@@ -3,6 +3,7 @@ package com.example.autofeedmobile.ui.schedule
 import com.example.autofeedmobile.util.formatTimeOnly
 
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,9 +19,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -109,6 +111,8 @@ fun ScheduleScreen(
             }
         }
     }
+
+    val context = LocalContext.current
 
     // Fetch schedules when user or date changes
     LaunchedEffect(userId, selectedDate) {
@@ -408,8 +412,50 @@ fun ScheduleScreen(
                                     }
                                 },
                                 onActionClick = {
-                                    val nextStatus = if (data.status.equals("Pending", ignoreCase = true)) "In Progress" else "Completed"
-                                    updateStatus(data.schedId, nextStatus)
+                                    val isPending = data.status.equals("Pending", ignoreCase = true)
+                                    val nextStatus = if (isPending) "In Progress" else "Completed"
+                                    
+                                    if (isPending) {
+                                        val todayStr = apiDateFormatter.format(Date())
+                                        val selectedDateStr = apiDateFormatter.format(selectedDate.time)
+                                        
+                                        if (selectedDateStr != todayStr) {
+                                            if (selectedDate.time.after(Date())) {
+                                                Toast.makeText(context, "Cannot start a future schedule.", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, "Cannot start a past schedule.", Toast.LENGTH_SHORT).show()
+                                            }
+                                        } else {
+                                            // Today's schedule, check time
+                                            try {
+                                                val startTimeStr = data.startTime ?: ""
+                                                val endTimeStr = data.endTime ?: ""
+                                                
+                                                val apiTimeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                                                val now = Calendar.getInstance()
+                                                val currentTime = apiTimeFormat.parse(apiTimeFormat.format(now.time))
+                                                val startTime = apiTimeFormat.parse(startTimeStr)
+                                                val endTime = apiTimeFormat.parse(endTimeStr)
+
+                                                if (currentTime != null && startTime != null && endTime != null) {
+                                                    if (currentTime.before(startTime)) {
+                                                        val displayFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                                                        Toast.makeText(context, "Cannot start early. Please wait until ${displayFormat.format(startTime)}", Toast.LENGTH_SHORT).show()
+                                                    } else if (currentTime.after(endTime)) {
+                                                        Toast.makeText(context, "Schedule time has passed. Please contact supervisor.", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        updateStatus(data.schedId, nextStatus)
+                                                    }
+                                                } else {
+                                                    updateStatus(data.schedId, nextStatus)
+                                                }
+                                            } catch (e: Exception) {
+                                                updateStatus(data.schedId, nextStatus)
+                                            }
+                                        }
+                                    } else {
+                                        updateStatus(data.schedId, nextStatus)
+                                    }
                                 }
                             )
                         }
@@ -466,6 +512,7 @@ fun ScheduleScreen(
                     } else if (selectedTaskDetail != null) {
                         ScheduleDetailContent(
                             task = selectedTaskDetail!!,
+                            selectedDate = selectedDate,
                             onStatusUpdate = { newStatus ->
                                 showBottomSheet = false
                                 if (selectedTaskId != -1) {

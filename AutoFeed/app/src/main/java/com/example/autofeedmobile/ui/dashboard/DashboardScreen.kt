@@ -580,6 +580,7 @@ fun DashboardScreen(
                     } else if (selectedTaskDetail != null) {
                         ScheduleDetailContent(
                             task = selectedTaskDetail!!,
+                            selectedDate = Calendar.getInstance(), // Dashboard always shows today's schedules
                             onStatusUpdate = { newStatus ->
                                 showBottomSheet = false
                                 if (selectedTaskId != -1) {
