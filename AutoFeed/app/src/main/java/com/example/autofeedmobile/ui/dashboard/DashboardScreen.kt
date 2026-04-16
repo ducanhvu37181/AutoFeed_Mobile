@@ -2,6 +2,8 @@ package com.example.autofeedmobile.ui.dashboard
 
 import com.example.autofeedmobile.ui.schedule.ScheduleTask
 import com.example.autofeedmobile.ui.schedule.ScheduleDetailContent
+import com.example.autofeedmobile.ui.request.RequestDetailContent
+import com.example.autofeedmobile.ui.report.ReportDetailContent
 import com.example.autofeedmobile.util.formatTimeOnly
 
 
@@ -64,6 +66,8 @@ fun DashboardScreen(
     // Detail state
     var selectedTaskDetail by remember { mutableStateOf<ScheduleTask?>(null) }
     var selectedTaskId by remember { mutableIntStateOf(-1) }
+    var selectedRequestId by remember { mutableIntStateOf(-1) }
+    var selectedReportId by remember { mutableIntStateOf(-1) }
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var isDetailLoading by remember { mutableStateOf(false) }
@@ -489,7 +493,10 @@ fun DashboardScreen(
                                                 "pending" -> Color(0xFFFFA000)
                                                 else -> Color(0xFFD32F2F)
                                             },
-                                            onClick = onNavigateToRequests
+                                            onClick = {
+                                                selectedRequestId = request.requestId
+                                                showBottomSheet = true
+                                            }
                                         )
                                         if (index < recentRequests.take(3).size - 1) {
                                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -536,7 +543,10 @@ fun DashboardScreen(
                                             message = report.description,
                                             color = Color.White,
                                             indicatorColor = Color(0xFF00897B),
-                                            onClick = onNavigateToReports
+                                            onClick = {
+                                                selectedReportId = report.reportId
+                                                showBottomSheet = true
+                                            }
                                         )
                                         if (index < recentReports.take(3).size - 1) {
                                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -557,6 +567,8 @@ fun DashboardScreen(
                     showBottomSheet = false 
                     selectedTaskDetail = null
                     selectedTaskId = -1
+                    selectedRequestId = -1
+                    selectedReportId = -1
                 },
                 sheetState = sheetState,
                 containerColor = Color.White,
@@ -575,6 +587,10 @@ fun DashboardScreen(
                                 }
                             }
                         )
+                    } else if (selectedRequestId != -1) {
+                        RequestDetailContent(requestId = selectedRequestId)
+                    } else if (selectedReportId != -1) {
+                        ReportDetailContent(reportId = selectedReportId)
                     }
                 }
             }

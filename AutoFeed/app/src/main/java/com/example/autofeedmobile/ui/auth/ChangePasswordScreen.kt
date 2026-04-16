@@ -1,5 +1,6 @@
 package com.example.autofeedmobile.ui.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -9,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -34,6 +36,7 @@ fun ChangePasswordScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -156,15 +159,18 @@ fun ChangePasswordScreen(
                                 ChangePasswordDto(oldPassword, newPassword)
                             )
                             if (response.isSuccessful) {
+                                Toast.makeText(context, "Password changed successfully", Toast.LENGTH_SHORT).show()
                                 successMessage = "Password changed successfully"
                                 oldPassword = ""
                                 newPassword = ""
                                 confirmPassword = ""
                             } else {
                                 errorMessage = "Failed to change password. Please check your current password."
+                                Toast.makeText(context, "Failed to change password", Toast.LENGTH_SHORT).show()
                             }
                         } catch (e: Exception) {
                             errorMessage = "An error occurred: ${e.localizedMessage}"
+                            Toast.makeText(context, "An error occurred", Toast.LENGTH_SHORT).show()
                         } finally {
                             isSubmitting = false
                         }

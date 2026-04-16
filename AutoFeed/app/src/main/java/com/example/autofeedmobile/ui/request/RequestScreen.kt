@@ -495,6 +495,7 @@ fun getRequestIcon(type: String) = when (type.lowercase()) {
     "feed" -> Icons.Default.Pets
     "maintenance" -> Icons.Default.Build
     "medical" -> Icons.Default.MedicalServices
+    "inventory" -> Icons.Default.Inventory2
     else -> Icons.Default.Description
 }
 
@@ -502,6 +503,7 @@ fun getRequestColor(type: String) = when (type.lowercase()) {
     "feed" -> Color(0xFF4CAF50)
     "maintenance" -> Color(0xFF2196F3)
     "medical" -> Color(0xFFF44336)
+    "inventory" -> Color(0xFFFF9800)
     else -> Color(0xFF9C27B0)
 }
 
