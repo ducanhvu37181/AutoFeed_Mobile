@@ -1,8 +1,10 @@
 package com.example.autofeedmobile.ui.schedule
 
 import com.example.autofeedmobile.util.formatTimeOnly
+import com.example.autofeedmobile.ui.schedule.ScheduleTask
 
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,18 +15,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.ScheduleData
@@ -42,7 +47,8 @@ fun ScheduleScreen(
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
-    onNavigateToNotifications: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToChickenManagement: () -> Unit = {}
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Pending", "In Progress", "Completed")
@@ -110,6 +116,8 @@ fun ScheduleScreen(
         }
     }
 
+    val context = LocalContext.current
+
     // Fetch schedules when user or date changes
     LaunchedEffect(userId, selectedDate) {
         fetchSchedules()
@@ -151,50 +159,29 @@ fun ScheduleScreen(
                             )
                         }
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clickable { showMenu = true }
+                            .padding(end = 12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = userFullName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = userAvatarUrl,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = "Farmer",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = userAvatarUrl,
-                                    contentDescription = "User Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Menu",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -250,6 +237,12 @@ fun ScheduleScreen(
                     label = { Text("Inventory") },
                     selected = false,
                     onClick = onNavigateToInventory
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
+                    label = { Text("Chicken") },
+                    selected = false,
+                    onClick = onNavigateToChickenManagement
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
@@ -408,8 +401,50 @@ fun ScheduleScreen(
                                     }
                                 },
                                 onActionClick = {
-                                    val nextStatus = if (data.status.equals("Pending", ignoreCase = true)) "In Progress" else "Completed"
-                                    updateStatus(data.schedId, nextStatus)
+                                    val isPending = data.status.equals("Pending", ignoreCase = true)
+                                    val nextStatus = if (isPending) "In Progress" else "Completed"
+                                    
+                                    if (isPending) {
+                                        val todayStr = apiDateFormatter.format(Date())
+                                        val selectedDateStr = apiDateFormatter.format(selectedDate.time)
+                                        
+                                        if (selectedDateStr != todayStr) {
+                                            if (selectedDate.time.after(Date())) {
+                                                Toast.makeText(context, "Cannot start a future schedule.", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, "Cannot start a past schedule.", Toast.LENGTH_SHORT).show()
+                                            }
+                                        } else {
+                                            // Today's schedule, check time
+                                            try {
+                                                val startTimeStr = data.startTime ?: ""
+                                                val endTimeStr = data.endTime ?: ""
+                                                
+                                                val apiTimeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                                                val now = Calendar.getInstance()
+                                                val currentTime = apiTimeFormat.parse(apiTimeFormat.format(now.time))
+                                                val startTime = apiTimeFormat.parse(startTimeStr)
+                                                val endTime = apiTimeFormat.parse(endTimeStr)
+
+                                                if (currentTime != null && startTime != null && endTime != null) {
+                                                    if (currentTime.before(startTime)) {
+                                                        val displayFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                                                        Toast.makeText(context, "Cannot start early. Please wait until ${displayFormat.format(startTime)}", Toast.LENGTH_SHORT).show()
+                                                    } else if (currentTime.after(endTime)) {
+                                                        Toast.makeText(context, "Schedule time has passed. Please contact supervisor.", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        updateStatus(data.schedId, nextStatus)
+                                                    }
+                                                } else {
+                                                    updateStatus(data.schedId, nextStatus)
+                                                }
+                                            } catch (e: Exception) {
+                                                updateStatus(data.schedId, nextStatus)
+                                            }
+                                        }
+                                    } else {
+                                        updateStatus(data.schedId, nextStatus)
+                                    }
                                 }
                             )
                         }
@@ -466,6 +501,7 @@ fun ScheduleScreen(
                     } else if (selectedTaskDetail != null) {
                         ScheduleDetailContent(
                             task = selectedTaskDetail!!,
+                            selectedDate = selectedDate,
                             onStatusUpdate = { newStatus ->
                                 showBottomSheet = false
                                 if (selectedTaskId != -1) {
@@ -518,7 +554,10 @@ fun ScheduleItem(
                     .padding(16.dp)
                     .weight(1f)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     if (isCompleted) {
                         Icon(
                             Icons.Default.CheckCircle,
@@ -543,7 +582,14 @@ fun ScheduleItem(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     
                     val priorityColor = when (priority.lowercase()) {
@@ -568,14 +614,19 @@ fun ScheduleItem(
                             color = priorityTextColor,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(Icons.Default.AccessTime, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                     Text(time, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
                     Spacer(modifier = Modifier.width(16.dp))

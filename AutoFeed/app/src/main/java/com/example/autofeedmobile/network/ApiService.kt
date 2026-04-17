@@ -89,4 +89,16 @@ interface ApiService {
         @Path("id") id: Int,
         @Part file: MultipartBody.Part
     ): Response<Unit>
+
+    @GET("api/Flock")
+    suspend fun getFlocks(): Response<FlockListResponse>
+
+    @GET("api/Flock/{id}")
+    suspend fun getFlockDetail(@Path("id") id: Int): Response<FlockDetailResponse>
+
+    @GET("api/LargeChicken")
+    suspend fun getLargeChickens(): Response<LargeChickenListResponse>
+
+    @GET("api/LargeChicken/{id}")
+    suspend fun getLargeChickenDetail(@Path("id") id: Int): Response<LargeChickenDetailResponse>
 }

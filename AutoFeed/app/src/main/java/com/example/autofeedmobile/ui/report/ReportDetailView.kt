@@ -102,25 +102,14 @@ fun ReportDetailContent(
                     )
                 }
                 
-                val statusColor = when (currentReport.status.lowercase()) {
-                    "pending" -> Color(0xFFFFF8E1)
-                    "completed", "approved" -> Color(0xFFE8F5E9)
-                    "rejected" -> Color(0xFFFFEBEE)
-                    else -> Color(0xFFF5F5F5)
-                }
-                val statusTextColor = when (currentReport.status.lowercase()) {
-                    "pending" -> Color(0xFFFFA000)
-                    "completed", "approved" -> Color(0xFF00C853)
-                    "rejected" -> Color(0xFFD32F2F)
-                    else -> Color(0xFF757575)
-                }
+                val (statusColor, statusTextColor) = getReportStatusColors(currentReport.status)
 
                 Surface(
                     color = statusColor,
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Text(
-                        text = currentReport.status.replaceFirstChar { it.uppercase() },
+                        text = getReportDisplayStatus(currentReport.status),
                         color = statusTextColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -146,7 +135,7 @@ fun ReportDetailContent(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.CalendarToday,
                     label = "Date",
-                    value = currentReport.createDate.split("T")[0]
+                    value = currentReport.createDate?.split("T")?.getOrNull(0) ?: "N/A"
                 )
             }
 
@@ -256,5 +245,23 @@ fun ReportDetailCard(
                 color = Color(0xFF1A1A1A)
             )
         }
+    }
+}
+
+private fun getReportStatusColors(status: String): Pair<Color, Color> {
+    return when (status.lowercase()) {
+        "pending" -> Pair(Color(0xFFFFF8E1), Color(0xFFFFA000))
+        "completed", "approved", "reviewed" -> Pair(Color(0xFFE8F5E9), Color(0xFF00C853))
+        "rejected" -> Pair(Color(0xFFFFEBEE), Color(0xFFD32F2F))
+        else -> Pair(Color(0xFFF5F5F5), Color(0xFF757575))
+    }
+}
+
+private fun getReportDisplayStatus(status: String): String {
+    return when {
+        status.equals("completed", ignoreCase = true) || 
+        status.equals("approved", ignoreCase = true) ||
+        status.equals("reviewed", ignoreCase = true) -> "Reviewed"
+        else -> status.replaceFirstChar { it.uppercase() }
     }
 }

@@ -1,6 +1,7 @@
 package com.example.autofeedmobile.ui.settings
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -11,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,6 +50,7 @@ fun ProfileScreen(
     onNavigateToReports: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToChickenManagement: () -> Unit = {},
     onProfileUpdated: (UserResponse) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -73,7 +76,7 @@ fun ProfileScreen(
                         userData?.let { onProfileUpdated(it) }
                     }
                 }
-                
+
                 val inventoryResponse = RetrofitClient.instance.getInventory()
                 if (inventoryResponse.isSuccessful) {
                     inventoryList = inventoryResponse.body()?.data ?: emptyList()
@@ -113,50 +116,29 @@ fun ProfileScreen(
                             )
                         }
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clickable { showMenu = true }
+                            .padding(end = 12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = userData?.fullName ?: userFullName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                        if (userData?.avatarUrl != null && userData?.avatarUrl!!.isNotEmpty()) {
+                            AsyncImage(
+                                model = userData?.avatarUrl,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = "Farmer",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (userData?.avatarUrl != null && userData?.avatarUrl!!.isNotEmpty()) {
-                                AsyncImage(
-                                    model = userData?.avatarUrl,
-                                    contentDescription = "User Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Menu",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -212,6 +194,12 @@ fun ProfileScreen(
                     label = { Text("Inventory") },
                     selected = false,
                     onClick = onNavigateToInventory
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
+                    label = { Text("Chicken") },
+                    selected = false,
+                    onClick = onNavigateToChickenManagement
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
@@ -415,6 +403,7 @@ fun EditProfileContent(
     var phone by remember { mutableStateOf(initialPhone) }
     var isSubmitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -468,11 +457,14 @@ fun EditProfileContent(
                                 )
                             )
                             if (response.isSuccessful) {
+                                Toast.makeText(context, "Profile updated successfully", Toast.LENGTH_SHORT).show()
                                 onSuccess()
                             } else {
+                                Toast.makeText(context, "Failed to update profile", Toast.LENGTH_SHORT).show()
                                 android.util.Log.e("ProfileScreen", "Update failed: ${response.code()} ${response.message()} ${response.errorBody()?.string()}")
                             }
                         } catch (e: Exception) {
+                            Toast.makeText(context, "Error updating profile", Toast.LENGTH_SHORT).show()
                             android.util.Log.e("ProfileScreen", "Error updating profile", e)
                         } finally {
                             isSubmitting = false
@@ -597,14 +589,17 @@ fun UpdateAvatarContent(
 
                                 val response = RetrofitClient.instance.updateAvatar(userId, body)
                                 if (response.isSuccessful) {
+                                    Toast.makeText(context, "Avatar updated successfully", Toast.LENGTH_SHORT).show()
                                     onAvatarUpdated()
                                     onSuccess()
                                 } else {
                                     errorMessage = "Upload failed: ${response.message()}"
+                                    Toast.makeText(context, "Failed to update avatar", Toast.LENGTH_SHORT).show()
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()
                                 errorMessage = "Error: ${e.localizedMessage}"
+                                Toast.makeText(context, "An error occurred", Toast.LENGTH_SHORT).show()
                             } finally {
                                 isSubmitting = false
                             }

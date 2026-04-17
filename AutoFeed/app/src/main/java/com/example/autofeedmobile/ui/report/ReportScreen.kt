@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,7 +39,8 @@ fun ReportScreen(
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onBackToProfile: () -> Unit = {},
-    onNavigateToNotifications: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToChickenManagement: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
@@ -49,24 +51,24 @@ fun ReportScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     var selectedFilter by remember { mutableStateOf("All") }
-    val filters = listOf("All", "Pending", "Approved", "Rejected")
+    val filters = listOf("All", "Pending", "Reviewed", "Rejected")
 
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredReports = reports.filter { report ->
         val matchesFilter = if (selectedFilter == "All") true
         else report.status.equals(selectedFilter, ignoreCase = true) ||
-                (selectedFilter == "Approved" && report.status.equals("completed", ignoreCase = true))
+                (selectedFilter == "Reviewed" && (report.status.equals("completed", ignoreCase = true) || report.status.equals("approved", ignoreCase = true) || report.status.equals("reviewed", ignoreCase = true)))
         val matchesSearch = report.type.contains(searchQuery, ignoreCase = true) ||
                 report.description.contains(searchQuery, ignoreCase = true)
         matchesFilter && matchesSearch
-    }.sortedByDescending { it.createDate }
+    }.sortedByDescending { it.createDate ?: "" }
 
     // Detail state
     var selectedReportDetail by remember { mutableStateOf<ReportData?>(null) }
     var showDetailBottomSheet by remember { mutableStateOf(false) }
     var showCreateBottomSheet by remember { mutableStateOf(false) }
-    
+
     val detailSheetState = rememberModalBottomSheetState()
     val createSheetState = rememberModalBottomSheetState()
 
@@ -128,50 +130,29 @@ fun ReportScreen(
                             )
                         }
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clickable { showMenu = true }
+                            .padding(end = 12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = userFullName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = userAvatarUrl,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = "Farmer",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = userAvatarUrl,
-                                    contentDescription = "User Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Menu",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -229,6 +210,12 @@ fun ReportScreen(
                     onClick = onNavigateToInventory
                 )
                 NavigationBarItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
+                    label = { Text("Chicken") },
+                    selected = false,
+                    onClick = onNavigateToChickenManagement
+                )
+                NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
                     label = { Text("Schedule") },
                     selected = false,
@@ -275,8 +262,12 @@ fun ReportScreen(
                 )
                 ReportSummaryCard(
                     modifier = Modifier.weight(1f),
-                    label = "Approved",
-                    value = reports.count { it.status.equals("Approved", ignoreCase = true) || it.status.equals("completed", ignoreCase = true) }.toString(),
+                    label = "Reviewed",
+                    value = reports.count { 
+                        it.status.equals("Reviewed", ignoreCase = true) || 
+                        it.status.equals("Approved", ignoreCase = true) || 
+                        it.status.equals("completed", ignoreCase = true) 
+                    }.toString(),
                     valueColor = Color(0xFF43A047)
                 )
             }
@@ -478,7 +469,7 @@ fun ReportItem(
 @Composable
 fun ReportStatusChip(status: String) {
     val (backgroundColor, textColor) = when (status.lowercase()) {
-        "completed", "approved" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+        "completed", "approved", "reviewed" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
         "pending" -> Color(0xFFFFF8E1) to Color(0xFFF57C00)
         "rejected" -> Color(0xFFFFEBEE) to Color(0xFFC62828)
         else -> Color(0xFFF5F5F5) to Color(0xFF616161)
@@ -488,7 +479,10 @@ fun ReportStatusChip(status: String) {
         color = backgroundColor,
         shape = RoundedCornerShape(16.dp)
     ) {
-        val displayStatus = if (status.equals("completed", ignoreCase = true)) "Approved" else status
+        val displayStatus = when {
+            status.equals("completed", ignoreCase = true) || status.equals("approved", ignoreCase = true) -> "Reviewed"
+            else -> status
+        }
         Text(
             text = displayStatus.replaceFirstChar { it.uppercase() },
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -503,6 +497,8 @@ fun getReportIcon(type: String) = when (type.lowercase()) {
     "feed" -> Icons.Default.Pets
     "maintenance" -> Icons.Default.Build
     "medical" -> Icons.Default.MedicalServices
+    "inventory" -> Icons.Default.Inventory2
+    "schedule" -> Icons.Default.CalendarToday
     else -> Icons.Default.Description
 }
 
@@ -510,6 +506,8 @@ fun getReportColor(type: String) = when (type.lowercase()) {
     "feed" -> Color(0xFF4CAF50)
     "maintenance" -> Color(0xFF2196F3)
     "medical" -> Color(0xFFF44336)
+    "inventory" -> Color(0xFFFF9800)
+    "schedule" -> Color(0xFF00897B)
     else -> Color(0xFF9C27B0)
 }
 

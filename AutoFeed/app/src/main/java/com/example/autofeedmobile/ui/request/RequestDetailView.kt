@@ -110,7 +110,7 @@ fun RequestDetailContent(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Text(
-                        text = currentRequest.status,
+                        text = getDisplayStatus(currentRequest.status),
                         color = statusTextColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -136,7 +136,7 @@ fun RequestDetailContent(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.CalendarToday,
                     label = "Date",
-                    value = currentRequest.createdAt.split("T")[0]
+                    value = currentRequest.createdAt?.split("T")?.getOrNull(0) ?: "N/A"
                 )
             }
 
@@ -257,6 +257,10 @@ private fun getStatusColors(status: String): Pair<Color, Color> {
         "rejected" -> Pair(Color(0xFFFFEBEE), Color(0xFFD32F2F))
         else -> Pair(Color(0xFFF5F5F5), Color(0xFF757575))
     }
+}
+
+private fun getDisplayStatus(status: String): String {
+    return status.replaceFirstChar { it.uppercase() }
 }
 
 @Preview(showBackground = true)

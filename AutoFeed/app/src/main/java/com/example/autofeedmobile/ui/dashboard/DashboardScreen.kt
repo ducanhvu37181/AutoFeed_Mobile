@@ -2,6 +2,8 @@ package com.example.autofeedmobile.ui.dashboard
 
 import com.example.autofeedmobile.ui.schedule.ScheduleTask
 import com.example.autofeedmobile.ui.schedule.ScheduleDetailContent
+import com.example.autofeedmobile.ui.request.RequestDetailContent
+import com.example.autofeedmobile.ui.report.ReportDetailContent
 import com.example.autofeedmobile.util.formatTimeOnly
 
 
@@ -12,9 +14,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ElectricBolt
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,7 +62,8 @@ fun DashboardScreen(
     onNavigateToProfile: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
     onNavigateToRequests: () -> Unit = {},
-    onNavigateToReports: () -> Unit = {}
+    onNavigateToReports: () -> Unit = {},
+    onNavigateToChickenManagement: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
@@ -64,6 +79,8 @@ fun DashboardScreen(
     // Detail state
     var selectedTaskDetail by remember { mutableStateOf<ScheduleTask?>(null) }
     var selectedTaskId by remember { mutableIntStateOf(-1) }
+    var selectedRequestId by remember { mutableIntStateOf(-1) }
+    var selectedReportId by remember { mutableIntStateOf(-1) }
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var isDetailLoading by remember { mutableStateOf(false) }
@@ -167,54 +184,31 @@ fun DashboardScreen(
                             )
                         }
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clickable { showMenu = true }
+                            .padding(end = 12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = userFullName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                        if (!avatarUrlKey.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = avatarUrlKey,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = "Farmer",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Profile",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (!avatarUrlKey.isNullOrEmpty()) {
-                                AsyncImage(
-                                    model = avatarUrlKey,
-                                    contentDescription = "User Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop,
-                                    onError = { error ->
-                                        android.util.Log.e("Coil", "Dashboard Avatar Load Error: ${error.result.throwable.message}")
-                                    }
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Menu",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
+
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
@@ -269,6 +263,12 @@ fun DashboardScreen(
                     label = { Text("Inventory") },
                     selected = false,
                     onClick = onNavigateToInventory
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
+                    label = { Text("Chicken") },
+                    selected = false,
+                    onClick = onNavigateToChickenManagement
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
@@ -487,9 +487,13 @@ fun DashboardScreen(
                                             indicatorColor = when (request.status.lowercase()) {
                                                 "approved" -> Color(0xFF00C853)
                                                 "pending" -> Color(0xFFFFA000)
-                                                else -> Color(0xFFD32F2F)
+                                                "rejected" -> Color(0xFFD32F2F)
+                                                else -> Color.Gray
                                             },
-                                            onClick = onNavigateToRequests
+                                            onClick = {
+                                                selectedRequestId = request.requestId
+                                                showBottomSheet = true
+                                            }
                                         )
                                         if (index < recentRequests.take(3).size - 1) {
                                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -535,8 +539,16 @@ fun DashboardScreen(
                                             title = report.type,
                                             message = report.description,
                                             color = Color.White,
-                                            indicatorColor = Color(0xFF00897B),
-                                            onClick = onNavigateToReports
+                                            indicatorColor = when (report.status.lowercase()) {
+                                                "reviewed", "completed", "approved" -> Color(0xFF00C853)
+                                                "pending" -> Color(0xFFFFA000)
+                                                "rejected" -> Color(0xFFD32F2F)
+                                                else -> Color.Gray
+                                            },
+                                            onClick = {
+                                                selectedReportId = report.reportId
+                                                showBottomSheet = true
+                                            }
                                         )
                                         if (index < recentReports.take(3).size - 1) {
                                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -557,6 +569,8 @@ fun DashboardScreen(
                     showBottomSheet = false 
                     selectedTaskDetail = null
                     selectedTaskId = -1
+                    selectedRequestId = -1
+                    selectedReportId = -1
                 },
                 sheetState = sheetState,
                 containerColor = Color.White,
@@ -568,6 +582,7 @@ fun DashboardScreen(
                     } else if (selectedTaskDetail != null) {
                         ScheduleDetailContent(
                             task = selectedTaskDetail!!,
+                            selectedDate = Calendar.getInstance(), // Dashboard always shows today's schedules
                             onStatusUpdate = { newStatus ->
                                 showBottomSheet = false
                                 if (selectedTaskId != -1) {
@@ -575,6 +590,10 @@ fun DashboardScreen(
                                 }
                             }
                         )
+                    } else if (selectedRequestId != -1) {
+                        RequestDetailContent(requestId = selectedRequestId)
+                    } else if (selectedReportId != -1) {
+                        ReportDetailContent(reportId = selectedReportId)
                     }
                 }
             }

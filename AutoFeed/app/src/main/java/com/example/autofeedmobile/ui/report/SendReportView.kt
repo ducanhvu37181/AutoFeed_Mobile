@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.rememberScrollState
@@ -38,6 +39,8 @@ fun SendReportContent(
     var description by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var expanded by remember { mutableStateOf(false) }
+    val reportTypes = listOf("Feed", "Maintenance", "Medical", "Inventory", "Schedule", "Others")
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var selectedFileUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -92,19 +95,56 @@ fun SendReportContent(
             color = Color(0xFF455A64),
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        OutlinedTextField(
-            value = type,
-            onValueChange = { if (canEditType) type = it },
-            modifier = Modifier.fillMaxWidth(),
-            readOnly = !canEditType,
-            placeholder = { Text("e.g. Daily Activity, Incident", color = Color.Gray) },
-            shape = RoundedCornerShape(8.dp),
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = Color.LightGray,
-                focusedBorderColor = Color(0xFF00897B)
+        if (canEditType) {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = type,
+                    onValueChange = {},
+                    readOnly = true,
+                    placeholder = { Text("Select report type", color = Color.Gray) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedBorderColor = Color(0xFF00897B)
+                    )
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(Color.White)
+                ) {
+                    reportTypes.forEach { selectionOption ->
+                        DropdownMenuItem(
+                            text = { Text(selectionOption) },
+                            onClick = {
+                                type = selectionOption
+                                expanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+        } else {
+            OutlinedTextField(
+                value = type,
+                onValueChange = { },
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = true,
+                shape = RoundedCornerShape(8.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedBorderColor = Color(0xFF00897B)
+                )
             )
-        )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -202,12 +242,15 @@ fun SendReportContent(
                                     filePart
                                 )
                                 if (response.isSuccessful) {
+                                    Toast.makeText(context, "Report submitted successfully", Toast.LENGTH_SHORT).show()
                                     onSuccess()
                                 } else {
                                     errorMessage = "Failed to submit report: ${response.code()}"
+                                    Toast.makeText(context, "Failed to submit report", Toast.LENGTH_SHORT).show()
                                 }
                             } catch (e: Exception) {
                                 errorMessage = "Error: ${e.localizedMessage}"
+                                Toast.makeText(context, "An error occurred during submission", Toast.LENGTH_SHORT).show()
                             } finally {
                                 isSubmitting = false
                             }

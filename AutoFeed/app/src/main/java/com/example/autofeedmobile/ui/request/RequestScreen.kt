@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,7 +40,8 @@ fun RequestScreen(
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onBackToProfile: () -> Unit = {},
-    onNavigateToNotifications: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToChickenManagement: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -94,7 +96,7 @@ fun RequestScreen(
         val matchesSearch = request.type.contains(searchQuery, ignoreCase = true) || 
                             request.description.contains(searchQuery, ignoreCase = true)
         matchesFilter && matchesSearch
-    }.sortedByDescending { it.createdAt }
+    }.sortedByDescending { it.createdAt ?: "" }
 
     Scaffold(
         topBar = {
@@ -125,50 +127,29 @@ fun RequestScreen(
                             )
                         }
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clickable { showMenu = true }
+                            .padding(end = 12.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = userFullName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                        if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = userAvatarUrl,
+                                contentDescription = "User Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = "Farmer",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (userAvatarUrl != null && userAvatarUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = userAvatarUrl,
-                                    contentDescription = "User Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Menu",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -224,6 +205,12 @@ fun RequestScreen(
                     label = { Text("Inventory") },
                     selected = false,
                     onClick = onNavigateToInventory
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
+                    label = { Text("Chicken") },
+                    selected = false,
+                    onClick = onNavigateToChickenManagement
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
@@ -482,7 +469,7 @@ fun StatusChip(status: String) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Text(
-            text = status,
+            text = status.replaceFirstChar { it.uppercase() },
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
@@ -495,6 +482,8 @@ fun getRequestIcon(type: String) = when (type.lowercase()) {
     "feed" -> Icons.Default.Pets
     "maintenance" -> Icons.Default.Build
     "medical" -> Icons.Default.MedicalServices
+    "inventory" -> Icons.Default.Inventory2
+    "schedule" -> Icons.Default.CalendarToday
     else -> Icons.Default.Description
 }
 
@@ -502,6 +491,8 @@ fun getRequestColor(type: String) = when (type.lowercase()) {
     "feed" -> Color(0xFF4CAF50)
     "maintenance" -> Color(0xFF2196F3)
     "medical" -> Color(0xFFF44336)
+    "inventory" -> Color(0xFFFF9800)
+    "schedule" -> Color(0xFF00897B)
     else -> Color(0xFF9C27B0)
 }
 
