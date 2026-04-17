@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.autofeedmobile.network.InventoryData
+import com.example.autofeedmobile.util.formatDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,7 +139,7 @@ fun InventoryDetailContent(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.CalendarToday,
                 label = "Expires",
-                value = item.expiredDate
+                value = formatDate(item.expiredDate)
             )
         }
 

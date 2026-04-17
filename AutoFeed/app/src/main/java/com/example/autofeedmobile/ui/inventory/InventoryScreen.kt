@@ -56,6 +56,9 @@ fun InventoryScreen(
     var showRequestSheet by remember { mutableStateOf(false) }
     var showReportSheet by remember { mutableStateOf(false) }
 
+    var selectedItem by remember { mutableStateOf<InventoryData?>(null) }
+    var showDetail by remember { mutableStateOf(false) }
+
     // Function to fetch inventory
     fun fetchInventory() {
         isLoading = true
@@ -329,7 +332,10 @@ fun InventoryScreen(
                                 quantity = "${item.quantity} Bags",
                                 lastUpdated = "Today", // Ideally from API
                                 status = if (item.quantity < 3) "Low Stock" else "In Stock",
-                                onClick = { /* TODO: Detail view */ }
+                                onClick = {
+                                    selectedItem = item
+                                    showDetail = true
+                                }
                             )
                         }
                     }
@@ -345,10 +351,13 @@ fun InventoryScreen(
             ) {
                 SendRequestContent(
                     userId = userId,
+                    initialType = "Inventory",
+                    canEditType = false,
                     onSuccess = {
                         showRequestSheet = false
                         fetchInventory()
-                    }
+                    },
+                    onCancel = { showRequestSheet = false }
                 )
             }
         }
@@ -360,11 +369,23 @@ fun InventoryScreen(
             ) {
                 SendReportContent(
                     userId = userId,
+                    initialType = "Inventory",
+                    canEditType = false,
                     onSuccess = {
                         showReportSheet = false
                         fetchInventory()
-                    }
+                    },
+                    onCancel = { showReportSheet = false }
                 )
+            }
+        }
+
+        if (showDetail && selectedItem != null) {
+            ModalBottomSheet(
+                onDismissRequest = { showDetail = false },
+                containerColor = Color.White
+            ) {
+                InventoryDetailContent(item = selectedItem!!)
             }
         }
     }

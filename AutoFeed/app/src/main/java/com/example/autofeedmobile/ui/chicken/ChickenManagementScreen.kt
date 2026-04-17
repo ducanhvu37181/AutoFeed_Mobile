@@ -48,6 +48,10 @@ fun ChickenManagementScreen(
     var showMenu by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    var statusFilter by remember { mutableStateOf("Active") }
+    val flockFilterOptions = listOf("All", "Active", "Transferred")
+    val chickenFilterOptions = listOf("All", "Active", "Exported")
+
     var flocks by remember { mutableStateOf<List<FlockData>>(emptyList()) }
     var largeChickens by remember { mutableStateOf<List<LargeChickenData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -196,25 +200,58 @@ fun ChickenManagementScreen(
                 }
             }
 
+            // Filter Chips
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val currentFilterOptions = if (selectedTab == 0) flockFilterOptions else chickenFilterOptions
+                currentFilterOptions.forEach { option ->
+                    FilterChip(
+                        selected = statusFilter == option,
+                        onClick = { statusFilter = option },
+                        label = { Text(option) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF00897B).copy(alpha = 0.1f),
+                            selectedLabelColor = Color(0xFF00897B)
+                        )
+                    )
+                }
+            }
+
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFF00897B))
                 }
             } else {
+                val filteredFlocks = when (statusFilter) {
+                    "Active" -> flocks.filter { it.isActive }
+                    "Transferred" -> flocks.filter { !it.isActive }
+                    else -> flocks
+                }
+                
+                val filteredChickens = when (statusFilter) {
+                    "Active" -> largeChickens.filter { it.isActive }
+                    "Exported" -> largeChickens.filter { !it.isActive }
+                    else -> largeChickens
+                }
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (selectedTab == 0) {
-                        items(flocks) { flock ->
+                        items(filteredFlocks) { flock ->
                             FlockItem(flock, onClick = {
                                 selectedFlock = flock
                                 showFlockDetail = true
                             })
                         }
                     } else {
-                        items(largeChickens) { chicken ->
+                        items(filteredChickens) { chicken ->
                             LargeChickenItem(chicken, onClick = {
                                 selectedLargeChicken = chicken
                                 showLargeChickenDetail = true
@@ -239,7 +276,10 @@ fun ChickenManagementScreen(
                 onDismissRequest = { showLargeChickenDetail = false },
                 containerColor = Color.White
             ) {
-                LargeChickenDetailView(chickenId = selectedLargeChicken!!.chickenLid)
+                LargeChickenDetailView(
+                    chickenId = selectedLargeChicken!!.chickenLid,
+                    onRefresh = { fetchData() }
+                )
             }
         }
     }
@@ -265,10 +305,24 @@ fun FlockItem(flock: FlockData, onClick: () -> Unit) {
                 StatusBadge(flock.healthStatus)
             }
             Spacer(modifier = Modifier.height(8.dp))
-            InfoColumn(
-                label = "Weight per Flock",
-                value = "${flock.weight} kg"
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                InfoColumn(
+                    label = "Weight per Flock",
+                    value = "${flock.weight} kg",
+                    modifier = Modifier.weight(1f)
+                )
+                if (flock.isActive && flock.barnId != null) {
+                    InfoColumn(
+                        label = "Barn ID",
+                        value = "#${flock.barnId}",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
             if (!flock.note.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Note: ${flock.note}", fontSize = 12.sp, color = Color.Gray)
@@ -304,7 +358,16 @@ fun LargeChickenItem(chicken: LargeChickenData, onClick: () -> Unit) {
                     Text(chicken.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     StatusBadge(chicken.healthStatus)
                 }
-                Text("Weight: ${chicken.weight} kg", fontSize = 14.sp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Weight: ${chicken.weight} kg", fontSize = 14.sp)
+                    if (chicken.isActive && chicken.barnId != null) {
+                        Text("Barn ID: #${chicken.barnId}", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF00897B))
+                    }
+                }
                 if (!chicken.note.isNullOrEmpty()) {
                     Text("Note: ${chicken.note}", fontSize = 12.sp, color = Color.Gray)
                 }

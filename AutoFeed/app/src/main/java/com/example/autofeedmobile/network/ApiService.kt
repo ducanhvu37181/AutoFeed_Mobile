@@ -101,4 +101,17 @@ interface ApiService {
 
     @GET("api/LargeChicken/{id}")
     suspend fun getLargeChickenDetail(@Path("id") id: Int): Response<LargeChickenDetailResponse>
+
+    @PUT("api/LargeChicken/{id}")
+    suspend fun updateLargeChicken(
+        @Path("id") id: Int,
+        @Body chicken: UpdateLargeChickenDto
+    ): Response<Unit>
+
+    @Multipart
+    @POST("api/LargeChicken/{id}/avatar")
+    suspend fun updateLargeChickenAvatar(
+        @Path("id") id: Int,
+        @Part file: MultipartBody.Part
+    ): Response<Unit>
 }

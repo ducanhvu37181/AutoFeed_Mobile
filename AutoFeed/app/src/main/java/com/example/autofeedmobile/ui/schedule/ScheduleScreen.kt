@@ -1,5 +1,6 @@
 package com.example.autofeedmobile.ui.schedule
 
+import com.example.autofeedmobile.util.formatDate
 import com.example.autofeedmobile.util.formatTimeOnly
 import com.example.autofeedmobile.ui.schedule.ScheduleTask
 
@@ -72,7 +73,7 @@ fun ScheduleScreen(
     var isDetailLoading by remember { mutableStateOf(false) }
 
     // Formatters
-    val displayDateFormatter = remember { SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()) }
+    val displayDateFormatter = remember { SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()) }
     val apiDateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
     // Function to fetch schedules

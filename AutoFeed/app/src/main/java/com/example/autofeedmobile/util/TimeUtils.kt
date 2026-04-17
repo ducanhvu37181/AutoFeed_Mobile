@@ -18,3 +18,25 @@ fun formatTimeOnly(timeString: String?): String {
         "N/A"
     }
 }
+
+fun formatDate(dateString: String?): String {
+    if (dateString.isNullOrEmpty()) return "N/A"
+    return try {
+        // Try to handle ISO format YYYY-MM-DD...
+        val datePart = if (dateString.contains("T")) {
+            dateString.split("T")[0]
+        } else {
+            dateString
+        }
+        
+        val parts = datePart.split("-")
+        if (parts.size == 3) {
+            // parts[0] is year, parts[1] is month, parts[2] is day
+            "${parts[2]}-${parts[1]}-${parts[0]}"
+        } else {
+            dateString
+        }
+    } catch (e: Exception) {
+        dateString ?: "N/A"
+    }
+}
