@@ -46,7 +46,6 @@ fun EditLargeChickenView(
 ) {
     var name by remember { mutableStateOf(chicken.name) }
     var weight by remember { mutableStateOf(chicken.weight.toString()) }
-    var age by remember { mutableStateOf(chicken.age.toString()) }
     var healthStatus by remember { mutableStateOf(chicken.healthStatus) }
     var note by remember { mutableStateOf(chicken.note ?: "") }
     var isSubmitting by remember { mutableStateOf(false) }
@@ -131,26 +130,15 @@ fun EditLargeChickenView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Weight
-            OutlinedTextField(
-                value = weight,
-                onValueChange = { weight = it },
-                label = { Text("Weight (kg)") },
-                modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                shape = RoundedCornerShape(8.dp)
-            )
-            // Age
-            OutlinedTextField(
-                value = age,
-                onValueChange = { age = it },
-                label = { Text("Age") },
-                modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(8.dp)
-            )
-        }
+        // Weight
+        OutlinedTextField(
+            value = weight,
+            onValueChange = { weight = it },
+            label = { Text("Weight (kg)") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            shape = RoundedCornerShape(8.dp)
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -221,7 +209,7 @@ fun EditLargeChickenView(
                                 flockId = chicken.flockId,
                                 name = name,
                                 weight = weight.toDoubleOrNull() ?: chicken.weight,
-                                age = age.toIntOrNull() ?: chicken.age,
+                                age = chicken.age,
                                 healthStatus = healthStatus,
                                 note = note
                             )
