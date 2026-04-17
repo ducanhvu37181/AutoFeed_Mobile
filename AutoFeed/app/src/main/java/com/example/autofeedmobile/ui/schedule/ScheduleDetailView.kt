@@ -216,8 +216,9 @@ fun ScheduleDetailContent(
                             } else {
                                 val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
                                 // task.time is "06:00 AM - 07:00 AM" or just "06:00 AM"
-                                val startTimeStr = task.time.split("-").first().trim()
-                                val endTimeStr = if (task.time.contains("-")) task.time.split("-").last().trim() else startTimeStr
+                                val timeStr = task.time ?: ""
+                                val startTimeStr = timeStr.split("-").first().trim()
+                                val endTimeStr = if (timeStr.contains("-")) timeStr.split("-").last().trim() else startTimeStr
 
                                 val startTime = timeFormat.parse(startTimeStr)
                                 val endTime = timeFormat.parse(endTimeStr)

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,7 +39,8 @@ fun ReportScreen(
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onBackToProfile: () -> Unit = {},
-    onNavigateToNotifications: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToChickenManagement: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
@@ -60,13 +62,13 @@ fun ReportScreen(
         val matchesSearch = report.type.contains(searchQuery, ignoreCase = true) ||
                 report.description.contains(searchQuery, ignoreCase = true)
         matchesFilter && matchesSearch
-    }.sortedByDescending { it.createDate }
+    }.sortedByDescending { it.createDate ?: "" }
 
     // Detail state
     var selectedReportDetail by remember { mutableStateOf<ReportData?>(null) }
     var showDetailBottomSheet by remember { mutableStateOf(false) }
     var showCreateBottomSheet by remember { mutableStateOf(false) }
-    
+
     val detailSheetState = rememberModalBottomSheetState()
     val createSheetState = rememberModalBottomSheetState()
 
@@ -206,6 +208,12 @@ fun ReportScreen(
                     label = { Text("Inventory") },
                     selected = false,
                     onClick = onNavigateToInventory
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
+                    label = { Text("Chicken") },
+                    selected = false,
+                    onClick = onNavigateToChickenManagement
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
@@ -490,6 +498,7 @@ fun getReportIcon(type: String) = when (type.lowercase()) {
     "maintenance" -> Icons.Default.Build
     "medical" -> Icons.Default.MedicalServices
     "inventory" -> Icons.Default.Inventory2
+    "schedule" -> Icons.Default.CalendarToday
     else -> Icons.Default.Description
 }
 
@@ -498,6 +507,7 @@ fun getReportColor(type: String) = when (type.lowercase()) {
     "maintenance" -> Color(0xFF2196F3)
     "medical" -> Color(0xFFF44336)
     "inventory" -> Color(0xFFFF9800)
+    "schedule" -> Color(0xFF00897B)
     else -> Color(0xFF9C27B0)
 }
 

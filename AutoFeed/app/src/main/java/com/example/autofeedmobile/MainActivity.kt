@@ -18,6 +18,7 @@ import com.example.autofeedmobile.data.SessionManager
 import com.example.autofeedmobile.ui.auth.ChangePasswordScreen
 import com.example.autofeedmobile.ui.auth.ForgotPasswordScreen
 import com.example.autofeedmobile.ui.auth.LoginScreen
+import com.example.autofeedmobile.ui.chicken.ChickenManagementScreen
 import com.example.autofeedmobile.ui.dashboard.DashboardScreen
 import com.example.autofeedmobile.ui.inventory.InventoryScreen
 import com.example.autofeedmobile.ui.notification.NotificationHelper
@@ -31,7 +32,7 @@ import com.example.autofeedmobile.ui.settings.SettingsScreen
 import com.example.autofeedmobile.ui.theme.AutoFeedMobileTheme
 
 enum class Screen {
-    Login, Dashboard, Inventory, Schedule, Requests, Reports, Profile, Notifications, Settings, ChangePassword, ForgotPassword
+    Login, Dashboard, Inventory, Schedule, Requests, Reports, Profile, Notifications, Settings, ChangePassword, ForgotPassword, ChickenManagement
 }
 
 class MainActivity : ComponentActivity() {
@@ -134,7 +135,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToProfile = { currentScreen = Screen.Profile },
                             onNavigateToNotifications = { currentScreen = Screen.Notifications },
                             onNavigateToRequests = { currentScreen = Screen.Requests },
-                            onNavigateToReports = { currentScreen = Screen.Reports }
+                            onNavigateToReports = { currentScreen = Screen.Reports },
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
                         )
                     }
                     Screen.Inventory -> {
@@ -150,7 +152,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
                         )
                     }
                     Screen.Schedule -> {
@@ -166,7 +169,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToDashboard = { currentScreen = Screen.Dashboard },
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
                         )
                     }
                     Screen.Requests -> {
@@ -183,7 +187,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onBackToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
                         )
                     }
                     Screen.Reports -> {
@@ -200,7 +205,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onBackToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToNotifications = { currentScreen = Screen.Notifications }
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
                         )
                     }
                     Screen.Profile -> {
@@ -219,6 +225,7 @@ class MainActivity : ComponentActivity() {
                             onNavigateToReports = { currentScreen = Screen.Reports },
                             onNavigateToNotifications = { currentScreen = Screen.Notifications },
                             onNavigateToSettings = { currentScreen = Screen.Settings },
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
                             onProfileUpdated = { updatedUser ->
                                 sessionManager.saveUser(updatedUser)
                                 userFullName = updatedUser.fullName
@@ -249,6 +256,24 @@ class MainActivity : ComponentActivity() {
                                 currentScreen = Screen.Login 
                             },
                             onBack = { currentScreen = Screen.Dashboard }
+                        )
+                    }
+                    Screen.ChickenManagement -> {
+                        ChickenManagementScreen(
+                            userId = userId,
+                            userFullName = userFullName,
+                            userAvatarUrl = userAvatarUrl,
+                            onLogout = {
+                                sessionManager.clearSession()
+                                RetrofitClient.setAuthToken(null)
+                                currentScreen = Screen.Login
+                            },
+                            onNavigateToDashboard = { currentScreen = Screen.Dashboard },
+                            onNavigateToInventory = { currentScreen = Screen.Inventory },
+                            onNavigateToSchedule = { currentScreen = Screen.Schedule },
+                            onNavigateToProfile = { currentScreen = Screen.Profile },
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
                         )
                     }
                 }

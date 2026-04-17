@@ -40,7 +40,7 @@ fun SendReportContent(
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var expanded by remember { mutableStateOf(false) }
-    val reportTypes = listOf("Feed", "Maintenance", "Medical", "Inventory", "Others")
+    val reportTypes = listOf("Feed", "Maintenance", "Medical", "Inventory", "Schedule", "Others")
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var selectedFileUri by remember { mutableStateOf<android.net.Uri?>(null) }

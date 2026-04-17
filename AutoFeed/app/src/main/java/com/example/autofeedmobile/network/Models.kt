@@ -71,7 +71,7 @@ data class RequestData(
     val type: String,
     val description: String,
     val status: String,
-    val createdAt: String,
+    val createdAt: String?,
     @SerializedName("url")
     val fileUrl: String?
 )
@@ -123,7 +123,7 @@ data class ReportData(
     val type: String,
     val description: String,
     val status: String,
-    val createDate: String,
+    val createDate: String?,
     @SerializedName("url")
     val fileUrl: String?
 )
@@ -155,4 +155,58 @@ data class ChangePasswordDto(
 
 data class ResetPasswordDto(
     val email: String
+)
+
+data class FlockData(
+    val flockId: Int,
+    val name: String,
+    val quantity: Int,
+    val weight: Double,
+    val dob: String?,
+    @SerializedName("doB")
+    val doB: String? = null,
+    val healthStatus: String,
+    val note: String?,
+    val ageInMonths: Int,
+    @SerializedName("isActive")
+    val isActive: Boolean,
+    val transferDate: String? = null
+)
+
+data class FlockListResponse(
+    val success: Boolean,
+    val data: List<FlockData>,
+    val description: String?
+)
+
+data class FlockDetailResponse(
+    val success: Boolean,
+    val data: FlockData,
+    val description: String?
+)
+
+data class LargeChickenData(
+    val chickenLid: Int,
+    val flockId: Int,
+    val name: String,
+    val weight: Double,
+    val healthStatus: String,
+    val note: String?,
+    @SerializedName("url")
+    val imageUrl: String?,
+    val isActive: Boolean
+)
+
+data class LargeChickenListResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: List<LargeChickenData>,
+    val description: String?
+)
+
+data class LargeChickenDetailResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: LargeChickenData,
+    val description: String?
 )

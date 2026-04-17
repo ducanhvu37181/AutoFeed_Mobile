@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,7 +40,8 @@ fun RequestScreen(
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onBackToProfile: () -> Unit = {},
-    onNavigateToNotifications: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToChickenManagement: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -94,7 +96,7 @@ fun RequestScreen(
         val matchesSearch = request.type.contains(searchQuery, ignoreCase = true) || 
                             request.description.contains(searchQuery, ignoreCase = true)
         matchesFilter && matchesSearch
-    }.sortedByDescending { it.createdAt }
+    }.sortedByDescending { it.createdAt ?: "" }
 
     Scaffold(
         topBar = {
@@ -203,6 +205,12 @@ fun RequestScreen(
                     label = { Text("Inventory") },
                     selected = false,
                     onClick = onNavigateToInventory
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
+                    label = { Text("Chicken") },
+                    selected = false,
+                    onClick = onNavigateToChickenManagement
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
@@ -475,6 +483,7 @@ fun getRequestIcon(type: String) = when (type.lowercase()) {
     "maintenance" -> Icons.Default.Build
     "medical" -> Icons.Default.MedicalServices
     "inventory" -> Icons.Default.Inventory2
+    "schedule" -> Icons.Default.CalendarToday
     else -> Icons.Default.Description
 }
 
@@ -483,6 +492,7 @@ fun getRequestColor(type: String) = when (type.lowercase()) {
     "maintenance" -> Color(0xFF2196F3)
     "medical" -> Color(0xFFF44336)
     "inventory" -> Color(0xFFFF9800)
+    "schedule" -> Color(0xFF00897B)
     else -> Color(0xFF9C27B0)
 }
 

@@ -136,7 +136,7 @@ fun RequestDetailContent(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.CalendarToday,
                     label = "Date",
-                    value = currentRequest.createdAt.split("T")[0]
+                    value = currentRequest.createdAt?.split("T")?.getOrNull(0) ?: "N/A"
                 )
             }
 

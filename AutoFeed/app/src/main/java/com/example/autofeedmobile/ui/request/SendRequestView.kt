@@ -40,7 +40,7 @@ fun SendRequestContent(
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var expanded by remember { mutableStateOf(false) }
-    val requestTypes = listOf("Feed", "Maintenance", "Medical", "Inventory", "Others")
+    val requestTypes = listOf("Feed", "Maintenance", "Medical", "Inventory", "Schedule", "Others")
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var selectedFileUri by remember { mutableStateOf<android.net.Uri?>(null) }

@@ -9,12 +9,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -38,7 +40,8 @@ fun InventoryScreen(
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
-    onNavigateToNotifications: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToChickenManagement: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -48,25 +51,17 @@ fun InventoryScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Detail state
-    var selectedItem by remember { mutableStateOf<InventoryData?>(null) }
-    val sheetState = rememberModalBottomSheetState()
-    var showBottomSheet by remember { mutableStateOf(false) }
-
-    // Quick Actions State
+    // Floating Action Button State
     var showQuickActions by remember { mutableStateOf(false) }
-    var showQuickRequestSheet by remember { mutableStateOf(false) }
-    var showQuickReportSheet by remember { mutableStateOf(false) }
-    val quickRequestSheetState = rememberModalBottomSheetState()
-    val quickReportSheetState = rememberModalBottomSheetState()
+    var showRequestSheet by remember { mutableStateOf(false) }
+    var showReportSheet by remember { mutableStateOf(false) }
 
+    // Function to fetch inventory
     fun fetchInventory() {
         isLoading = true
         scope.launch {
             try {
-                val response = RetrofitClient.instance.getInventory(
-                    search = if (searchQuery.isNotBlank()) searchQuery else null
-                )
+                val response = RetrofitClient.instance.getInventory()
                 if (response.isSuccessful) {
                     inventoryList = response.body()?.data ?: emptyList()
                     errorMessage = null
@@ -81,7 +76,7 @@ fun InventoryScreen(
         }
     }
 
-    LaunchedEffect(searchQuery) {
+    LaunchedEffect(Unit) {
         fetchInventory()
     }
 
@@ -189,6 +184,12 @@ fun InventoryScreen(
                     onClick = {}
                 )
                 NavigationBarItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
+                    label = { Text("Chicken") },
+                    selected = false,
+                    onClick = onNavigateToChickenManagement
+                )
+                NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
                     label = { Text("Schedule") },
                     selected = false,
@@ -208,29 +209,30 @@ fun InventoryScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (showQuickActions) {
-                    ExtendedFloatingActionButton(
-                        onClick = {
-                            showQuickReportSheet = true
+                    SmallFloatingActionButton(
+                        onClick = { 
                             showQuickActions = false
+                            showReportSheet = true 
                         },
-                        icon = { Icon(Icons.Default.Description, contentDescription = null) },
-                        text = { Text("Quick Report") },
-                        containerColor = Color.White,
-                        contentColor = Color(0xFF00897B),
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    ExtendedFloatingActionButton(
-                        onClick = {
-                            showQuickRequestSheet = true
+                        containerColor = Color(0xFFE91E63),
+                        contentColor = Color.White,
+                        shape = CircleShape
+                    ) {
+                        Icon(Icons.Default.Report, contentDescription = "Send Report")
+                    }
+                    SmallFloatingActionButton(
+                        onClick = { 
                             showQuickActions = false
+                            showRequestSheet = true 
                         },
-                        icon = { Icon(Icons.Default.Assignment, contentDescription = null) },
-                        text = { Text("Quick Request") },
-                        containerColor = Color.White,
-                        contentColor = Color(0xFF00897B),
-                        shape = RoundedCornerShape(16.dp)
-                    )
+                        containerColor = Color(0xFF2196F3),
+                        contentColor = Color.White,
+                        shape = CircleShape
+                    ) {
+                        Icon(Icons.Default.AddShoppingCart, contentDescription = "Send Request")
+                    }
                 }
+                
                 FloatingActionButton(
                     onClick = { showQuickActions = !showQuickActions },
                     containerColor = Color(0xFF00897B),
@@ -251,89 +253,83 @@ fun InventoryScreen(
                 .fillMaxSize()
                 .background(Color(0xFFF5F5F5))
         ) {
-            // Summary Cards
+            // Summary Row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 InventorySummaryCard(
                     modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Inventory2,
-                    label = "Total",
+                    icon = Icons.Default.Inventory,
+                    label = "Items",
                     value = inventoryList.size.toString(),
-                    color = Color(0xFF2196F3)
+                    color = Color(0xFFE3F2FD)
                 )
                 InventorySummaryCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Warning,
-                    label = "Low",
-                    value = inventoryList.count { it.quantity in 1..2 }.toString(),
-                    color = Color(0xFFFFA000)
-                )
-                InventorySummaryCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.ErrorOutline,
-                    label = "Out",
-                    value = inventoryList.count { it.quantity == 0 }.toString(),
-                    color = Color(0xFFD32F2F)
+                    label = "Low Stock",
+                    value = inventoryList.count { it.quantity < 3 }.toString(),
+                    color = Color(0xFFFFF3E0)
                 )
             }
 
             // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                placeholder = { Text("Search inventory...", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-                shape = RoundedCornerShape(24.dp),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.White,
-                    focusedContainerColor = Color.White,
-                    unfocusedBorderColor = Color.LightGray,
-                    focusedBorderColor = Color(0xFF00897B)
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    placeholder = { Text("Search inventory...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
                 )
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Inventory List
-            Box(modifier = Modifier.fillMaxSize()) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF00897B))
-                } else if (errorMessage != null) {
-                    Text(errorMessage!!, modifier = Modifier.align(Alignment.Center), color = Color.Red)
-                } else if (inventoryList.isEmpty()) {
-                    Text("No inventory found", modifier = Modifier.align(Alignment.Center), color = Color.Gray)
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF00897B))
+                }
+            } else if (errorMessage != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(errorMessage!!, color = Color.Red)
+                }
+            } else {
+                val filteredList = inventoryList.filter { 
+                    it.foodName.contains(searchQuery, ignoreCase = true) || 
+                    it.foodType.contains(searchQuery, ignoreCase = true)
+                }
+
+                if (filteredList.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No items found", color = Color.Gray)
+                    }
                 } else {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 80.dp)
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(inventoryList) { item ->
-                            val displayStatus = when {
-                                item.quantity == 0 -> "Out of Stock"
-                                item.quantity < 3 -> "Low Stock"
-                                else -> "Good"
-                            }
+                        items(filteredList) { item ->
                             InventoryItemCard(
                                 name = item.foodName,
-                                type = item.foodType,
+                                category = item.foodType,
                                 quantity = "${item.quantity} Bags",
-                                expiry = item.expiredDate,
-                                status = displayStatus,
-                                onClick = {
-                                    selectedItem = item
-                                    showBottomSheet = true
-                                }
+                                lastUpdated = "Today", // Ideally from API
+                                status = if (item.quantity < 3) "Low Stock" else "In Stock",
+                                onClick = { /* TODO: Detail view */ }
                             )
                         }
                     }
@@ -341,59 +337,33 @@ fun InventoryScreen(
             }
         }
 
-        // Bottom Sheet for Detail View
-        if (showBottomSheet && selectedItem != null) {
+        // Bottom Sheets
+        if (showRequestSheet) {
             ModalBottomSheet(
-                onDismissRequest = { 
-                    showBottomSheet = false 
-                    selectedItem = null
-                },
-                sheetState = sheetState,
-                containerColor = Color.White,
-                dragHandle = null
-            ) {
-                InventoryDetailContent(item = selectedItem!!)
-            }
-        }
-
-        // Quick Request Sheet
-        if (showQuickRequestSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showQuickRequestSheet = false },
-                sheetState = quickRequestSheetState,
-                containerColor = Color.White,
-                dragHandle = null
+                onDismissRequest = { showRequestSheet = false },
+                containerColor = Color.White
             ) {
                 SendRequestContent(
                     userId = userId,
-                    initialType = "Inventory",
-                    canEditType = false,
                     onSuccess = {
-                        showQuickRequestSheet = false
+                        showRequestSheet = false
                         fetchInventory()
-                    },
-                    onCancel = { showQuickRequestSheet = false }
+                    }
                 )
             }
         }
 
-        // Quick Report Sheet
-        if (showQuickReportSheet) {
+        if (showReportSheet) {
             ModalBottomSheet(
-                onDismissRequest = { showQuickReportSheet = false },
-                sheetState = quickReportSheetState,
-                containerColor = Color.White,
-                dragHandle = null
+                onDismissRequest = { showReportSheet = false },
+                containerColor = Color.White
             ) {
                 SendReportContent(
                     userId = userId,
-                    initialType = "Inventory",
-                    canEditType = false,
                     onSuccess = {
-                        showQuickReportSheet = false
+                        showReportSheet = false
                         fetchInventory()
-                    },
-                    onCancel = { showQuickReportSheet = false }
+                    }
                 )
             }
         }
@@ -403,7 +373,7 @@ fun InventoryScreen(
 @Composable
 fun InventorySummaryCard(
     modifier: Modifier = Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     value: String,
     color: Color
@@ -411,21 +381,26 @@ fun InventorySummaryCard(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(label, fontSize = 11.sp, color = Color.Gray)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(color),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = Color(0xFF00897B))
             }
-            Text(
-                value, 
-                fontSize = 20.sp, 
-                fontWeight = FontWeight.Bold, 
-                color = if (value != "0" && (color == Color(0xFFFFA000) || color == Color(0xFFD32F2F))) color else Color.Black
-            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(label, fontSize = 12.sp, color = Color.Gray)
+                Text(value, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -433,69 +408,55 @@ fun InventorySummaryCard(
 @Composable
 fun InventoryItemCard(
     name: String,
-    type: String,
+    category: String,
     quantity: String,
-    expiry: String,
+    lastUpdated: String,
     status: String,
     onClick: () -> Unit
 ) {
+    val isLowStock = status == "Low Stock"
+    
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isLowStock) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)),
+                contentAlignment = Alignment.Center
             ) {
-                Column {
-                    Text(name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(type, fontSize = 12.sp, color = Color.Gray)
-                }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                Icon(
+                    if (isLowStock) Icons.Default.Warning else Icons.Default.Inventory,
+                    contentDescription = null,
+                    tint = if (isLowStock) Color.Red else Color(0xFF00897B)
+                )
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Quantity", fontSize = 11.sp, color = Color.Gray)
-                    Text(quantity, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                }
-                Column(modifier = Modifier.weight(1.2f)) {
-                    Text("Expires", fontSize = 11.sp, color = Color.Gray)
-                    Text(expiry, fontSize = 14.sp)
-                }
-                
-                val statusColor = when (status.lowercase()) {
-                    "good" -> Color(0xFFE8F5E9)
-                    "low stock" -> Color(0xFFFFF8E1)
-                    "out of stock", "expired" -> Color(0xFFFFEBEE)
-                    else -> Color(0xFFF5F5F5)
-                }
-                val statusTextColor = when (status.lowercase()) {
-                    "good" -> Color(0xFF00C853)
-                    "low stock" -> Color(0xFFFFA000)
-                    "out of stock", "expired" -> Color(0xFFD32F2F)
-                    else -> Color(0xFF757575)
-                }
-                
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(category, fontSize = 12.sp, color = Color.Gray)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(quantity, fontWeight = FontWeight.Bold, color = if (isLowStock) Color.Red else Color.Black)
                 Surface(
-                    color = statusColor,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (isLowStock) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
                 ) {
                     Text(
-                        text = status.replaceFirstChar { it.uppercase() },
-                        color = statusTextColor,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        status,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        fontSize = 10.sp,
+                        color = if (isLowStock) Color.Red else Color(0xFF00897B),
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -506,5 +467,5 @@ fun InventoryItemCard(
 @Preview(showBackground = true)
 @Composable
 fun InventoryScreenPreview() {
-    InventoryScreen(userId = 1, userFullName = "John Farmer")
+    InventoryScreen(userId = 1, userFullName = "John Doe")
 }

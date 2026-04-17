@@ -135,7 +135,7 @@ fun ReportDetailContent(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.CalendarToday,
                     label = "Date",
-                    value = currentReport.createDate.split("T")[0]
+                    value = currentReport.createDate?.split("T")?.getOrNull(0) ?: "N/A"
                 )
             }
 
