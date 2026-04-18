@@ -385,7 +385,14 @@ fun InventoryScreen(
                 onDismissRequest = { showDetail = false },
                 containerColor = Color.White
             ) {
-                InventoryDetailContent(item = selectedItem!!)
+                InventoryDetailContent(
+                    item = selectedItem!!,
+                    userId = userId,
+                    onRefresh = {
+                        fetchInventory()
+                        showDetail = false
+                    }
+                )
             }
         }
     }

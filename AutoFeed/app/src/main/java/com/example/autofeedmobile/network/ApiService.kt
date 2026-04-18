@@ -53,6 +53,12 @@ interface ApiService {
         @Query("type") type: String? = null
     ): Response<InventoryListResponse>
 
+    @PUT("api/Inventory/{id}")
+    suspend fun updateInventory(
+        @Path("id") id: Int,
+        @Body dto: UpdateInventoryDto
+    ): Response<Unit>
+
     @GET("api/Report/user/{userId}")
     suspend fun getReports(@Path("userId") userId: Int): Response<ReportListResponse>
 

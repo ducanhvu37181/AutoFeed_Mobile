@@ -164,9 +164,25 @@ fun FlockDetailContent(flock: FlockData) {
             DetailInfoCard(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.Scale,
-                label = "Weight per Flock",
+                label = "Weight",
                 value = "${flock.weight} kg"
             )
+            if (flock.isActive) {
+                DetailInfoCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Numbers,
+                    label = "Quantity",
+                    value = "${flock.quantity}"
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             DetailInfoCard(
                 modifier = Modifier.weight(1f),
                 icon = if (flock.isActive) Icons.Default.CheckCircle else Icons.Default.MoveToInbox,
@@ -174,17 +190,15 @@ fun FlockDetailContent(flock: FlockData) {
                 value = if (flock.isActive) "Active" else "Transferred",
                 iconColor = if (flock.isActive) Color(0xFF4CAF50) else Color(0xFFF44336)
             )
-        }
-
-        if (flock.isActive && flock.barnId != null) {
-            Spacer(modifier = Modifier.height(12.dp))
-            DetailInfoCard(
-                modifier = Modifier.fillMaxWidth(),
-                icon = Icons.Default.Home,
-                label = "Assigned Barn ID",
-                value = "#${flock.barnId}",
-                iconColor = Color(0xFF00897B)
-            )
+            if (flock.isActive && flock.barnId != null) {
+                DetailInfoCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Home,
+                    label = "Assigned Barn ID",
+                    value = "#${flock.barnId}",
+                    iconColor = Color(0xFF00897B)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))

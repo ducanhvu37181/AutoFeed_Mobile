@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -666,7 +667,13 @@ fun DashboardNotificationItem(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF1A1A1A))
-                    Text(message, fontSize = 12.sp, color = Color(0xFF455A64))
+                    Text(
+                        text = message,
+                        fontSize = 12.sp,
+                        color = Color(0xFF455A64),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
             }

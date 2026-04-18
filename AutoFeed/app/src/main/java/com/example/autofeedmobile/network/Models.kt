@@ -214,6 +214,11 @@ data class UpdateLargeChickenDto(
     val note: String?
 )
 
+data class UpdateInventoryDto(
+    val quantity: Int,
+    val expiredDate: String
+)
+
 data class LargeChickenListResponse(
     val status: Boolean,
     val httpCode: Int,

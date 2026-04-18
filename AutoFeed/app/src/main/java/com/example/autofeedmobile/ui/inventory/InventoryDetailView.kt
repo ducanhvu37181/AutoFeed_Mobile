@@ -10,8 +10,9 @@ import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,13 +21,31 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.autofeedmobile.network.InventoryData
+import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.network.UpdateInventoryDto
 import com.example.autofeedmobile.util.formatDate
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventoryDetailContent(
-    item: InventoryData
+    item: InventoryData,
+    userId: Int,
+    onRefresh: () -> Unit = {}
 ) {
+    var showEditDialog by remember { mutableStateOf(false) }
+    var quantity by remember { mutableStateOf(item.quantity.toString()) }
+    var expiredDate by remember {
+        val datePart = item.expiredDate.split("T")[0]
+        val parts = datePart.split("-")
+        val displayDate = if (parts.size == 3) "${parts[2]}-${parts[1]}-${parts[0]}" else datePart
+        mutableStateOf(displayDate)
+    }
+    var isUpdating by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -42,7 +61,24 @@ fun InventoryDetailContent(
                 .align(Alignment.CenterHorizontally)
         )
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Edit Button Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(
+                onClick = { showEditDialog = true },
+                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF00897B))
+            ) {
+                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Update Inventory")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Title and Status Row
         Row(
@@ -186,6 +222,84 @@ fun InventoryDetailContent(
         
         Spacer(modifier = Modifier.height(32.dp))
     }
+
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Update Inventory") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = quantity,
+                        onValueChange = { quantity = it },
+                        label = { Text("Quantity") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = expiredDate,
+                        onValueChange = { expiredDate = it },
+                        label = { Text("Expired Date (DD-MM-YYYY)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("31-12-2024") }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        isUpdating = true
+                        scope.launch {
+                            try {
+                                // Convert DD-MM-YYYY back to YYYY-MM-DD for API
+                                val dateParts = expiredDate.split("-")
+                                val apiDate = if (dateParts.size == 3) {
+                                    "${dateParts[2]}-${dateParts[1]}-${dateParts[0]}"
+                                } else {
+                                    expiredDate
+                                }
+
+                                val response = RetrofitClient.instance.updateInventory(
+                                    item.inventId,
+                                    UpdateInventoryDto(quantity.toInt(), apiDate)
+                                )
+                                if (response.isSuccessful) {
+                                    // Automatically send report
+                                    val description = "Update stock for ${item.foodName}: quantity and expireDate after update: $quantity, $expiredDate"
+                                    val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                                    val reportTypePart = "Inventory".toRequestBody("text/plain".toMediaTypeOrNull())
+                                    val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
+                                    
+                                    RetrofitClient.instance.createReport(
+                                        userId = userIdPart,
+                                        type = reportTypePart,
+                                        description = descriptionPart,
+                                        file = null
+                                    )
+                                    
+                                    onRefresh()
+                                    showEditDialog = false
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            } finally {
+                                isUpdating = false
+                            }
+                        }
+                    },
+                    enabled = !isUpdating
+                ) {
+                    if (isUpdating) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                    else Text("Update")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -240,6 +354,7 @@ fun InventoryDetailPreview() {
             totalWeight = 1000,
             expiredDate = "2027-01-01",
             status = "Good"
-        )
+        ),
+        userId = 1
     )
 }

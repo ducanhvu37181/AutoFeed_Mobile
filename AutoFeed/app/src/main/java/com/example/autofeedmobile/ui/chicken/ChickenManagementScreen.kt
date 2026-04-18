@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -302,7 +303,11 @@ fun FlockItem(flock: FlockData, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(flock.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                StatusBadge(flock.healthStatus)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusBadge(if (flock.isActive) "Active" else "Transferred")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    StatusBadge(flock.healthStatus)
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -311,10 +316,17 @@ fun FlockItem(flock: FlockData, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 InfoColumn(
-                    label = "Weight per Flock",
+                    label = "Weight",
                     value = "${flock.weight} kg",
                     modifier = Modifier.weight(1f)
                 )
+                if (flock.isActive) {
+                    InfoColumn(
+                        label = "Quantity",
+                        value = "${flock.quantity}",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 if (flock.isActive && flock.barnId != null) {
                     InfoColumn(
                         label = "Barn ID",
@@ -341,35 +353,67 @@ fun LargeChickenItem(chicken: LargeChickenData, onClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top // Align to top to give more space for badges
+        ) {
             AsyncImage(
                 model = RetrofitClient.getFullUrl(chicken.imageUrl),
                 contentDescription = chicken.name,
-                modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
+                // Title and Badges Column
+                Text(
+                    text = chicken.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(chicken.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    StatusBadge(if (chicken.isActive) "Active" else "Exported")
+                    Spacer(modifier = Modifier.width(8.dp))
                     StatusBadge(chicken.healthStatus)
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Weight: ${chicken.weight} kg", fontSize = 14.sp)
+                    Text("Weight: ${chicken.weight} kg", fontSize = 14.sp, color = Color.Gray)
                     if (chicken.isActive && chicken.barnId != null) {
-                        Text("Barn ID: #${chicken.barnId}", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF00897B))
+                        Text(
+                            "Barn ID: #${chicken.barnId}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF00897B)
+                        )
                     }
                 }
                 if (!chicken.note.isNullOrEmpty()) {
-                    Text("Note: ${chicken.note}", fontSize = 12.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Note: ${chicken.note}",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
@@ -387,14 +431,14 @@ fun InfoColumn(label: String, value: String, modifier: Modifier = Modifier) {
 @Composable
 fun StatusBadge(status: String) {
     val color = when (status.lowercase()) {
-        "healthy" -> Color(0xFFE8F5E9)
-        "sick" -> Color(0xFFFFEBEE)
+        "healthy", "active" -> Color(0xFFE8F5E9)
+        "sick", "transferred", "exported" -> Color(0xFFFFEBEE)
         "warning" -> Color(0xFFFFF3E0)
         else -> Color(0xFFF5F5F5)
     }
     val textColor = when (status.lowercase()) {
-        "healthy" -> Color(0xFF2E7D32)
-        "sick" -> Color(0xFFD32F2F)
+        "healthy", "active" -> Color(0xFF2E7D32)
+        "sick", "transferred", "exported" -> Color(0xFFD32F2F)
         "warning" -> Color(0xFFEF6C00)
         else -> Color(0xFF616161)
     }
