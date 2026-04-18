@@ -158,11 +158,13 @@ fun LoginScreen(
                                     val response = RetrofitClient.instance.login(email, password)
                                     val body = response.body()
                                     if (response.isSuccessful && body?.user != null && body.token != null) {
-                                        // Restrict access to Farmer role only (roleId 3)
-                                        if (body.user.roleId == 3) {
-                                            onLoginSuccess(body.user!!, body.token!!)
-                                        } else {
+                                        // Restrict access: Only Farmers (roleId 3) with active status (status = true) can log in
+                                        if (body.user.roleId != 3) {
                                             Toast.makeText(context, "Access Denied: Only Farmers can log in to this mobile app.", Toast.LENGTH_SHORT).show()
+                                        } else if (body.user.status == false) {
+                                            Toast.makeText(context, "Login failed: Your account has been disabled.", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            onLoginSuccess(body.user!!, body.token!!)
                                         }
                                     } else {
                                         Toast.makeText(context, "Login failed: Please check the email and password", Toast.LENGTH_SHORT).show()

@@ -73,7 +73,7 @@ fun ScheduleScreen(
     var isDetailLoading by remember { mutableStateOf(false) }
 
     // Formatters
-    val displayDateFormatter = remember { SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()) }
+    val displayDateFormatter = remember { SimpleDateFormat("EEEE, dd-MM-yyyy", Locale.getDefault()) }
     val apiDateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
     // Function to fetch schedules

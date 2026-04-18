@@ -59,7 +59,7 @@ fun EditLargeChickenView(
         onResult = { uri -> selectedImageUri = uri }
     )
 
-    val healthStatuses = listOf("Healthy", "Sick", "Recovering", "Under Treatment")
+    val healthStatuses = listOf("Healthy", "Sick")
     var expanded by remember { mutableStateOf(false) }
 
     Column(

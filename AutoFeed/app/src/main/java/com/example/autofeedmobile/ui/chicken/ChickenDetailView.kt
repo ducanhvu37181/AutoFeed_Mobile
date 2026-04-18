@@ -262,17 +262,19 @@ fun LargeChickenDetailContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Edit Button Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            TextButton(
-                onClick = onEditClick,
-                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF00897B))
+        if (chicken.isActive) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
             ) {
-                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Edit Details")
+                TextButton(
+                    onClick = onEditClick,
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF00897B))
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Edit Details")
+                }
             }
         }
 
@@ -360,6 +362,17 @@ fun LargeChickenDetailContent(
                 label = "Assigned Barn ID",
                 value = "#${chicken.barnId}",
                 iconColor = Color(0xFF00897B)
+            )
+        }
+
+        if (!chicken.isActive && chicken.exportDate != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            DetailInfoCard(
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Default.Event,
+                label = "Export Date",
+                value = formatDate(chicken.exportDate),
+                iconColor = Color(0xFFF44336)
             )
         }
 

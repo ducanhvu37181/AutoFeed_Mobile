@@ -9,7 +9,8 @@ data class UserResponse(
     val email: String,
     val phone: String,
     val avatarUrl: String?,
-    val roleId: Int
+    val roleId: Int,
+    val status: Boolean = true
 )
 
 data class UserProfileResponse(
@@ -200,7 +201,8 @@ data class LargeChickenData(
     val isActive: Boolean,
     val barnId: Int? = null,
     val ageInMonths: Int? = null,
-    val flockName: String? = null
+    val flockName: String? = null,
+    val exportDate: String? = null
 )
 
 data class UpdateLargeChickenDto(
