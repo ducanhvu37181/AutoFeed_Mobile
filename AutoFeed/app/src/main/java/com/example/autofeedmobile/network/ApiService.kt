@@ -102,6 +102,12 @@ interface ApiService {
     @GET("api/Flock/{id}")
     suspend fun getFlockDetail(@Path("id") id: Int): Response<FlockDetailResponse>
 
+    @PUT("api/Flock/{id}")
+    suspend fun updateFlock(
+        @Path("id") id: Int,
+        @Body flock: UpdateFlockDto
+    ): Response<Unit>
+
     @GET("api/LargeChicken")
     suspend fun getLargeChickens(): Response<LargeChickenListResponse>
 

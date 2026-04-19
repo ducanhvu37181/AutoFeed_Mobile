@@ -214,6 +214,13 @@ data class UpdateLargeChickenDto(
     val note: String?
 )
 
+data class UpdateFlockDto(
+    val flockId: Int,
+    val name: String,
+    val healthStatus: String,
+    val note: String?
+)
+
 data class UpdateInventoryDto(
     val quantity: Int,
     val expiredDate: String

@@ -24,13 +24,16 @@ import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.util.formatDate
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FlockDetailView(flockId: Int) {
+fun FlockDetailView(flockId: Int, onRefresh: () -> Unit = {}) {
     var flock by remember { mutableStateOf<FlockData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var showEditSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(flockId) {
+    fun fetchDetail() {
+        isLoading = true
         scope.launch {
             try {
                 val response = RetrofitClient.instance.getFlockDetail(flockId)
@@ -45,12 +48,38 @@ fun FlockDetailView(flockId: Int) {
         }
     }
 
+    LaunchedEffect(flockId) {
+        fetchDetail()
+    }
+
     if (isLoading) {
         Box(modifier = Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Color(0xFF00897B))
         }
     } else if (flock != null) {
-        FlockDetailContent(flock!!)
+        Column {
+            FlockDetailContent(
+                flock = flock!!,
+                onEditClick = { showEditSheet = true }
+            )
+        }
+
+        if (showEditSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showEditSheet = false },
+                containerColor = Color.White
+            ) {
+                EditFlockView(
+                    flock = flock!!,
+                    onSuccess = {
+                        showEditSheet = false
+                        fetchDetail()
+                        onRefresh()
+                    },
+                    onCancel = { showEditSheet = false }
+                )
+            }
+        }
     }
 }
 
@@ -114,7 +143,10 @@ fun LargeChickenDetailView(chickenId: Int, onRefresh: () -> Unit = {}) {
 }
 
 @Composable
-fun FlockDetailContent(flock: FlockData) {
+fun FlockDetailContent(
+    flock: FlockData,
+    onEditClick: () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -130,7 +162,26 @@ fun FlockDetailContent(flock: FlockData) {
                 .align(Alignment.CenterHorizontally)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Edit Button Row
+        if (flock.isActive) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onEditClick,
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF00897B))
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Edit Details")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Title and Status Row
         Row(

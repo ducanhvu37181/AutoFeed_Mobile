@@ -268,7 +268,10 @@ fun ChickenManagementScreen(
                 onDismissRequest = { showFlockDetail = false },
                 containerColor = Color.White
             ) {
-                FlockDetailView(flockId = selectedFlock!!.flockId)
+                FlockDetailView(
+                    flockId = selectedFlock!!.flockId,
+                    onRefresh = { fetchData() }
+                )
             }
         }
 

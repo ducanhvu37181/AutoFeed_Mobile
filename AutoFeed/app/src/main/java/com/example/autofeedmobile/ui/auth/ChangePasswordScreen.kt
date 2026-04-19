@@ -1,6 +1,7 @@
 package com.example.autofeedmobile.ui.auth
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -37,6 +38,10 @@ fun ChangePasswordScreen(
     var successMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    BackHandler {
+        onBack()
+    }
 
     Scaffold(
         topBar = {
