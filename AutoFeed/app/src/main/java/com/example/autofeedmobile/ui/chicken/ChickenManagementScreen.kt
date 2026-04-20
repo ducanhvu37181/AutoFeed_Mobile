@@ -269,6 +269,7 @@ fun ChickenManagementScreen(
                 containerColor = Color.White
             ) {
                 FlockDetailView(
+                    userId = userId,
                     flockId = selectedFlock!!.flockId,
                     onRefresh = { fetchData() }
                 )
@@ -281,6 +282,7 @@ fun ChickenManagementScreen(
                 containerColor = Color.White
             ) {
                 LargeChickenDetailView(
+                    userId = userId,
                     chickenId = selectedLargeChicken!!.chickenLid,
                     onRefresh = { fetchData() }
                 )

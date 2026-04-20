@@ -34,12 +34,14 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditLargeChickenView(
+    userId: Int,
     chicken: LargeChickenData,
     onSuccess: () -> Unit,
     onCancel: () -> Unit
@@ -231,6 +233,23 @@ fun EditLargeChickenView(
                             }
 
                             if (updateResponse.isSuccessful && avatarSuccess) {
+                                // Automatically send report
+                                try {
+                                    val description = "Update chicken detail for ${chicken.name} (ID: ${chicken.chickenLid}). New status: $healthStatus, Weight: $weight kg, Note: $note"
+                                    val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                                    val typePart = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
+                                    val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
+                                    
+                                    RetrofitClient.instance.createReport(
+                                        userId = userIdPart,
+                                        type = typePart,
+                                        description = descriptionPart,
+                                        file = null
+                                    )
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+
                                 Toast.makeText(context, "Chicken updated successfully", Toast.LENGTH_SHORT).show()
                                 onSuccess()
                             } else {

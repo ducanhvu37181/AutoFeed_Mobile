@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FlockDetailView(flockId: Int, onRefresh: () -> Unit = {}) {
+fun FlockDetailView(userId: Int, flockId: Int, onRefresh: () -> Unit = {}) {
     var flock by remember { mutableStateOf<FlockData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showEditSheet by remember { mutableStateOf(false) }
@@ -70,6 +70,7 @@ fun FlockDetailView(flockId: Int, onRefresh: () -> Unit = {}) {
                 containerColor = Color.White
             ) {
                 EditFlockView(
+                    userId = userId,
                     flock = flock!!,
                     onSuccess = {
                         showEditSheet = false
@@ -85,7 +86,7 @@ fun FlockDetailView(flockId: Int, onRefresh: () -> Unit = {}) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LargeChickenDetailView(chickenId: Int, onRefresh: () -> Unit = {}) {
+fun LargeChickenDetailView(userId: Int, chickenId: Int, onRefresh: () -> Unit = {}) {
     var chicken by remember { mutableStateOf<LargeChickenData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showEditSheet by remember { mutableStateOf(false) }
@@ -129,6 +130,7 @@ fun LargeChickenDetailView(chickenId: Int, onRefresh: () -> Unit = {}) {
                 containerColor = Color.White
             ) {
                 EditLargeChickenView(
+                    userId = userId,
                     chicken = chicken!!,
                     onSuccess = {
                         showEditSheet = false

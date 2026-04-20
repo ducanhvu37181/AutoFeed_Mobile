@@ -1,5 +1,7 @@
 package com.example.autofeedmobile.ui.inventory
 
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -100,16 +102,21 @@ fun InventoryDetailContent(
                 )
             }
             
-            val effectiveStatus = when {
-                item.quantity == 0 -> "Out of Stock"
-                item.quantity < 3 -> "Low Stock"
-                else -> "Good"
-            }
-            val (statusColor, statusTextColor) = when (effectiveStatus) {
-                "Good" -> Color(0xFFE8F5E9) to Color(0xFF00C853)
-                "Low Stock" -> Color(0xFFFFF8E1) to Color(0xFFFFA000)
-                "Out of Stock" -> Color(0xFFFFEBEE) to Color(0xFFD32F2F)
-                else -> Color(0xFFF5F5F5) to Color(0xFF757575)
+            val isLowStock = item.quantity <= 5
+            val (effectiveStatus, statusColor, statusTextColor) = try {
+                val expireDate = LocalDate.parse(item.expiredDate.split("T")[0])
+                val today = LocalDate.now()
+                val daysUntil = ChronoUnit.DAYS.between(today, expireDate)
+
+                when {
+                    expireDate.isBefore(today) -> Triple("Expired", Color(0xFFFFEBEE), Color(0xFFD32F2F))
+                    daysUntil <= 3 -> Triple("Nearly Expired", Color(0xFFFFF3E0), Color(0xFFF57C00))
+                    isLowStock -> Triple("Low Stock", Color(0xFFFFF8E1), Color(0xFFFFA000))
+                    else -> Triple("Good", Color(0xFFE8F5E9), Color(0xFF00C853))
+                }
+            } catch (e: Exception) {
+                if (isLowStock) Triple("Low Stock", Color(0xFFFFF8E1), Color(0xFFFFA000))
+                else Triple("Good", Color(0xFFE8F5E9), Color(0xFF00C853))
             }
 
             Surface(
@@ -126,14 +133,36 @@ fun InventoryDetailContent(
             }
         }
 
-        // Add a warning message if low or out of stock
-        if (item.quantity < 3) {
+        // Add a warning message if low stock, nearly expired, or expired
+        val isWarning = try {
+            val expireDate = LocalDate.parse(item.expiredDate.split("T")[0])
+            val daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), expireDate)
+            item.quantity <= 5 || expireDate.isBefore(LocalDate.now()) || daysUntil <= 3
+        } catch (e: Exception) {
+            item.quantity <= 5
+        }
+
+        if (isWarning) {
             Spacer(modifier = Modifier.height(16.dp))
-            val isOutOfStock = item.quantity == 0
+            val warningInfo = try {
+                val expireDate = LocalDate.parse(item.expiredDate.split("T")[0])
+                val today = LocalDate.now()
+                val daysUntil = ChronoUnit.DAYS.between(today, expireDate)
+                
+                when {
+                    expireDate.isBefore(today) -> "This item has expired!" to Color(0xFFD32F2F)
+                    daysUntil <= 3 -> "This item is nearly expired (expires in $daysUntil days)!" to Color(0xFFF57C00)
+                    item.quantity == 0 -> "This item is currently out of stock!" to Color(0xFFD32F2F)
+                    else -> "Low stock warning: Please restock soon." to Color(0xFFFFA000)
+                }
+            } catch (e: Exception) {
+                "Warning: Check stock levels and expiry." to Color(0xFFFFA000)
+            }
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isOutOfStock) Color(0xFFFFEBEE) else Color(0xFFFFF8E1)
+                    containerColor = warningInfo.second.copy(alpha = 0.1f)
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -144,14 +173,14 @@ fun InventoryDetailContent(
                     Icon(
                         imageVector = Icons.Default.Warning,
                         contentDescription = null,
-                        tint = if (isOutOfStock) Color(0xFFD32F2F) else Color(0xFFFFA000),
+                        tint = warningInfo.second,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = if (isOutOfStock) "This item is currently out of stock!" else "Low stock warning: Please restock soon.",
+                        text = warningInfo.first,
                         fontSize = 14.sp,
-                        color = if (isOutOfStock) Color(0xFFD32F2F) else Color(0xFFFFA000),
+                        color = warningInfo.second,
                         fontWeight = FontWeight.Medium
                     )
                 }

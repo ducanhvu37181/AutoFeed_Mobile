@@ -18,11 +18,14 @@ import androidx.compose.ui.unit.sp
 import com.example.autofeedmobile.network.FlockData
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.UpdateFlockDto
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditFlockView(
+    userId: Int,
     flock: FlockData,
     onSuccess: () -> Unit,
     onCancel: () -> Unit
@@ -147,6 +150,23 @@ fun EditFlockView(
                             val updateResponse = RetrofitClient.instance.updateFlock(flock.flockId, updateDto)
 
                             if (updateResponse.isSuccessful) {
+                                // Automatically send report
+                                try {
+                                    val description = "Update flock detail for ${flock.name} (ID: ${flock.flockId}). New status: $healthStatus, Name: $name, Note: $note"
+                                    val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                                    val typePart = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
+                                    val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
+                                    
+                                    RetrofitClient.instance.createReport(
+                                        userId = userIdPart,
+                                        type = typePart,
+                                        description = descriptionPart,
+                                        file = null
+                                    )
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+
                                 Toast.makeText(context, "Flock updated successfully", Toast.LENGTH_SHORT).show()
                                 onSuccess()
                             } else {
