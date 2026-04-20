@@ -53,6 +53,12 @@ interface ApiService {
         @Query("type") type: String? = null
     ): Response<InventoryListResponse>
 
+    @PUT("api/Inventory/{id}")
+    suspend fun updateInventory(
+        @Path("id") id: Int,
+        @Body dto: UpdateInventoryDto
+    ): Response<Unit>
+
     @GET("api/Report/user/{userId}")
     suspend fun getReports(@Path("userId") userId: Int): Response<ReportListResponse>
 
@@ -96,9 +102,28 @@ interface ApiService {
     @GET("api/Flock/{id}")
     suspend fun getFlockDetail(@Path("id") id: Int): Response<FlockDetailResponse>
 
+    @PUT("api/Flock/{id}")
+    suspend fun updateFlock(
+        @Path("id") id: Int,
+        @Body flock: UpdateFlockDto
+    ): Response<Unit>
+
     @GET("api/LargeChicken")
     suspend fun getLargeChickens(): Response<LargeChickenListResponse>
 
     @GET("api/LargeChicken/{id}")
     suspend fun getLargeChickenDetail(@Path("id") id: Int): Response<LargeChickenDetailResponse>
+
+    @PUT("api/LargeChicken/{id}")
+    suspend fun updateLargeChicken(
+        @Path("id") id: Int,
+        @Body chicken: UpdateLargeChickenDto
+    ): Response<Unit>
+
+    @Multipart
+    @POST("api/LargeChicken/{id}/avatar")
+    suspend fun updateLargeChickenAvatar(
+        @Path("id") id: Int,
+        @Part file: MultipartBody.Part
+    ): Response<Unit>
 }

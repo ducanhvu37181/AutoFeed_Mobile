@@ -21,15 +21,19 @@ import androidx.compose.runtime.*
 import com.example.autofeedmobile.network.FlockData
 import com.example.autofeedmobile.network.LargeChickenData
 import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.util.formatDate
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FlockDetailView(flockId: Int) {
+fun FlockDetailView(userId: Int, flockId: Int, onRefresh: () -> Unit = {}) {
     var flock by remember { mutableStateOf<FlockData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var showEditSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(flockId) {
+    fun fetchDetail() {
+        isLoading = true
         scope.launch {
             try {
                 val response = RetrofitClient.instance.getFlockDetail(flockId)
@@ -44,22 +48,52 @@ fun FlockDetailView(flockId: Int) {
         }
     }
 
+    LaunchedEffect(flockId) {
+        fetchDetail()
+    }
+
     if (isLoading) {
         Box(modifier = Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Color(0xFF00897B))
         }
     } else if (flock != null) {
-        FlockDetailContent(flock!!)
+        Column {
+            FlockDetailContent(
+                flock = flock!!,
+                onEditClick = { showEditSheet = true }
+            )
+        }
+
+        if (showEditSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showEditSheet = false },
+                containerColor = Color.White
+            ) {
+                EditFlockView(
+                    userId = userId,
+                    flock = flock!!,
+                    onSuccess = {
+                        showEditSheet = false
+                        fetchDetail()
+                        onRefresh()
+                    },
+                    onCancel = { showEditSheet = false }
+                )
+            }
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LargeChickenDetailView(chickenId: Int) {
+fun LargeChickenDetailView(userId: Int, chickenId: Int, onRefresh: () -> Unit = {}) {
     var chicken by remember { mutableStateOf<LargeChickenData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var showEditSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(chickenId) {
+    fun fetchDetail() {
+        isLoading = true
         scope.launch {
             try {
                 val response = RetrofitClient.instance.getLargeChickenDetail(chickenId)
@@ -74,17 +108,47 @@ fun LargeChickenDetailView(chickenId: Int) {
         }
     }
 
+    LaunchedEffect(chickenId) {
+        fetchDetail()
+    }
+
     if (isLoading) {
         Box(modifier = Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Color(0xFF00897B))
         }
     } else if (chicken != null) {
-        LargeChickenDetailContent(chicken!!)
+        Column {
+            LargeChickenDetailContent(
+                chicken = chicken!!,
+                onEditClick = { showEditSheet = true }
+            )
+        }
+
+        if (showEditSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showEditSheet = false },
+                containerColor = Color.White
+            ) {
+                EditLargeChickenView(
+                    userId = userId,
+                    chicken = chicken!!,
+                    onSuccess = {
+                        showEditSheet = false
+                        fetchDetail()
+                        onRefresh()
+                    },
+                    onCancel = { showEditSheet = false }
+                )
+            }
+        }
     }
 }
 
 @Composable
-fun FlockDetailContent(flock: FlockData) {
+fun FlockDetailContent(
+    flock: FlockData,
+    onEditClick: () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -100,7 +164,26 @@ fun FlockDetailContent(flock: FlockData) {
                 .align(Alignment.CenterHorizontally)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Edit Button Row
+        if (flock.isActive) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onEditClick,
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF00897B))
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Edit Details")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Title and Status Row
         Row(
@@ -134,9 +217,25 @@ fun FlockDetailContent(flock: FlockData) {
             DetailInfoCard(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.Scale,
-                label = "Weight per Flock",
+                label = "Weight",
                 value = "${flock.weight} kg"
             )
+            if (flock.isActive) {
+                DetailInfoCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Numbers,
+                    label = "Quantity",
+                    value = "${flock.quantity}"
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             DetailInfoCard(
                 modifier = Modifier.weight(1f),
                 icon = if (flock.isActive) Icons.Default.CheckCircle else Icons.Default.MoveToInbox,
@@ -144,6 +243,15 @@ fun FlockDetailContent(flock: FlockData) {
                 value = if (flock.isActive) "Active" else "Transferred",
                 iconColor = if (flock.isActive) Color(0xFF4CAF50) else Color(0xFFF44336)
             )
+            if (flock.isActive && flock.barnId != null) {
+                DetailInfoCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Home,
+                    label = "Assigned Barn ID",
+                    value = "#${flock.barnId}",
+                    iconColor = Color(0xFF00897B)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -156,13 +264,13 @@ fun FlockDetailContent(flock: FlockData) {
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.Cake,
                 label = "Age",
-                value = "${flock.ageInMonths} mo"
+                value = "${flock.ageInMonths} ${if (flock.ageInMonths == 1) "month" else "months"}"
             )
             DetailInfoCard(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.CalendarToday,
                 label = "Date of Birth",
-                value = (flock.doB ?: flock.dob)?.split("T")?.getOrNull(0) ?: "N/A"
+                value = formatDate(flock.doB ?: flock.dob)
             )
         }
 
@@ -172,7 +280,7 @@ fun FlockDetailContent(flock: FlockData) {
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Default.Event,
                 label = "Transfer Date",
-                value = flock.transferDate
+                value = formatDate(flock.transferDate)
             )
         }
 
@@ -199,7 +307,10 @@ fun FlockDetailContent(flock: FlockData) {
 }
 
 @Composable
-fun LargeChickenDetailContent(chicken: LargeChickenData) {
+fun LargeChickenDetailContent(
+    chicken: LargeChickenData,
+    onEditClick: () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -215,7 +326,26 @@ fun LargeChickenDetailContent(chicken: LargeChickenData) {
                 .align(Alignment.CenterHorizontally)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Edit Button Row
+        if (chicken.isActive) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onEditClick,
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF00897B))
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Edit Details")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Header with Image
         Row(
@@ -272,12 +402,46 @@ fun LargeChickenDetailContent(chicken: LargeChickenData) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        DetailInfoCard(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            icon = Icons.Default.Grid3x3,
-            label = "Flock Association",
-            value = "Associated with Flock #${chicken.flockId}"
-        )
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val ageVal = chicken.ageInMonths ?: chicken.age
+            DetailInfoCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Cake,
+                label = "Age",
+                value = "$ageVal ${if (ageVal == 1) "month" else "months"}"
+            )
+            DetailInfoCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Grid3x3,
+                label = "Flock Association",
+                value = chicken.flockName ?: "N/A"
+            )
+        }
+
+        if (chicken.isActive && chicken.barnId != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            DetailInfoCard(
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Default.Home,
+                label = "Assigned Barn ID",
+                value = "#${chicken.barnId}",
+                iconColor = Color(0xFF00897B)
+            )
+        }
+
+        if (!chicken.isActive && chicken.exportDate != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            DetailInfoCard(
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Default.Event,
+                label = "Export Date",
+                value = formatDate(chicken.exportDate),
+                iconColor = Color(0xFFF44336)
+            )
+        }
 
         if (!chicken.note.isNullOrEmpty()) {
             Spacer(modifier = Modifier.height(24.dp))

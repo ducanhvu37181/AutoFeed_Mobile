@@ -1,5 +1,6 @@
 package com.example.autofeedmobile.ui.schedule
 
+import com.example.autofeedmobile.util.formatDate
 import com.example.autofeedmobile.util.formatTimeOnly
 import com.example.autofeedmobile.ui.schedule.ScheduleTask
 
@@ -72,7 +73,7 @@ fun ScheduleScreen(
     var isDetailLoading by remember { mutableStateOf(false) }
 
     // Formatters
-    val displayDateFormatter = remember { SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()) }
+    val displayDateFormatter = remember { SimpleDateFormat("EEEE, dd-MM-yyyy", Locale.getDefault()) }
     val apiDateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
     // Function to fetch schedules
@@ -404,44 +405,27 @@ fun ScheduleScreen(
                                     val isPending = data.status.equals("Pending", ignoreCase = true)
                                     val nextStatus = if (isPending) "In Progress" else "Completed"
                                     
-                                    if (isPending) {
-                                        val todayStr = apiDateFormatter.format(Date())
-                                        val selectedDateStr = apiDateFormatter.format(selectedDate.time)
-                                        
-                                        if (selectedDateStr != todayStr) {
-                                            if (selectedDate.time.after(Date())) {
-                                                Toast.makeText(context, "Cannot start a future schedule.", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                Toast.makeText(context, "Cannot start a past schedule.", Toast.LENGTH_SHORT).show()
-                                            }
-                                        } else {
-                                            // Today's schedule, check time
-                                            try {
-                                                val startTimeStr = data.startTime ?: ""
-                                                val endTimeStr = data.endTime ?: ""
-                                                
-                                                val apiTimeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                                                val now = Calendar.getInstance()
-                                                val currentTime = apiTimeFormat.parse(apiTimeFormat.format(now.time))
-                                                val startTime = apiTimeFormat.parse(startTimeStr)
-                                                val endTime = apiTimeFormat.parse(endTimeStr)
+                                    val todayStr = apiDateFormatter.format(Date())
+                                    val selectedDateStr = apiDateFormatter.format(selectedDate.time)
+                                    
+                                    val today = Calendar.getInstance().apply {
+                                        set(Calendar.HOUR_OF_DAY, 0)
+                                        set(Calendar.MINUTE, 0)
+                                        set(Calendar.SECOND, 0)
+                                        set(Calendar.MILLISECOND, 0)
+                                    }
+                                    val selected = Calendar.getInstance().apply {
+                                        time = selectedDate.time
+                                        set(Calendar.HOUR_OF_DAY, 0)
+                                        set(Calendar.MINUTE, 0)
+                                        set(Calendar.SECOND, 0)
+                                        set(Calendar.MILLISECOND, 0)
+                                    }
 
-                                                if (currentTime != null && startTime != null && endTime != null) {
-                                                    if (currentTime.before(startTime)) {
-                                                        val displayFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-                                                        Toast.makeText(context, "Cannot start early. Please wait until ${displayFormat.format(startTime)}", Toast.LENGTH_SHORT).show()
-                                                    } else if (currentTime.after(endTime)) {
-                                                        Toast.makeText(context, "Schedule time has passed. Please contact supervisor.", Toast.LENGTH_SHORT).show()
-                                                    } else {
-                                                        updateStatus(data.schedId, nextStatus)
-                                                    }
-                                                } else {
-                                                    updateStatus(data.schedId, nextStatus)
-                                                }
-                                            } catch (e: Exception) {
-                                                updateStatus(data.schedId, nextStatus)
-                                            }
-                                        }
+                                    if (selected.before(today)) {
+                                        Toast.makeText(context, "Cannot update a past schedule.", Toast.LENGTH_SHORT).show()
+                                    } else if (isPending && selectedDateStr != todayStr && selected.after(today)) {
+                                        Toast.makeText(context, "Cannot start a future schedule.", Toast.LENGTH_SHORT).show()
                                     } else {
                                         updateStatus(data.schedId, nextStatus)
                                     }

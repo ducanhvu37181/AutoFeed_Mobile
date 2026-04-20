@@ -9,7 +9,8 @@ data class UserResponse(
     val email: String,
     val phone: String,
     val avatarUrl: String?,
-    val roleId: Int
+    val roleId: Int,
+    val status: Boolean = true
 )
 
 data class UserProfileResponse(
@@ -170,7 +171,8 @@ data class FlockData(
     val ageInMonths: Int,
     @SerializedName("isActive")
     val isActive: Boolean,
-    val transferDate: String? = null
+    val transferDate: String? = null,
+    val barnId: Int? = null
 )
 
 data class FlockListResponse(
@@ -190,11 +192,38 @@ data class LargeChickenData(
     val flockId: Int,
     val name: String,
     val weight: Double,
+    val age: Int,
     val healthStatus: String,
     val note: String?,
     @SerializedName("url")
     val imageUrl: String?,
-    val isActive: Boolean
+    @SerializedName("isActive")
+    val isActive: Boolean,
+    val barnId: Int? = null,
+    val ageInMonths: Int? = null,
+    val flockName: String? = null,
+    val exportDate: String? = null
+)
+
+data class UpdateLargeChickenDto(
+    val flockId: Int,
+    val name: String,
+    val weight: Double,
+    val age: Int,
+    val healthStatus: String,
+    val note: String?
+)
+
+data class UpdateFlockDto(
+    val flockId: Int,
+    val name: String,
+    val healthStatus: String,
+    val note: String?
+)
+
+data class UpdateInventoryDto(
+    val quantity: Int,
+    val expiredDate: String
 )
 
 data class LargeChickenListResponse(

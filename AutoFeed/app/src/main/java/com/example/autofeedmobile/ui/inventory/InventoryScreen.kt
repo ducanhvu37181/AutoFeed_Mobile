@@ -1,5 +1,8 @@
 package com.example.autofeedmobile.ui.inventory
 
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -56,6 +59,9 @@ fun InventoryScreen(
     var showRequestSheet by remember { mutableStateOf(false) }
     var showReportSheet by remember { mutableStateOf(false) }
 
+    var selectedItem by remember { mutableStateOf<InventoryData?>(null) }
+    var showDetail by remember { mutableStateOf(false) }
+
     // Function to fetch inventory
     fun fetchInventory() {
         isLoading = true
@@ -94,7 +100,19 @@ fun InventoryScreen(
                         IconButton(onClick = onNavigateToNotifications) {
                             Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                         }
-                        if (inventoryList.any { it.quantity < 3 }) {
+                        if (inventoryList.any { 
+                            val isLowStock = it.quantity <= 5
+                            val isExpired = try {
+                                val expireDate = LocalDate.parse(it.expiredDate.split("T")[0])
+                                expireDate.isBefore(LocalDate.now())
+                            } catch (e: Exception) { false }
+                            val isNearlyExpired = try {
+                                val expireDate = LocalDate.parse(it.expiredDate.split("T")[0])
+                                val daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), expireDate)
+                                daysUntil in 0..3
+                            } catch (e: Exception) { false }
+                            isLowStock || isExpired || isNearlyExpired
+                        }) {
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)
@@ -271,7 +289,7 @@ fun InventoryScreen(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Warning,
                     label = "Low Stock",
-                    value = inventoryList.count { it.quantity < 3 }.toString(),
+                    value = inventoryList.count { it.quantity <= 5 }.toString(),
                     color = Color(0xFFFFF3E0)
                 )
             }
@@ -323,13 +341,34 @@ fun InventoryScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(filteredList) { item ->
+                            val isLowStock = item.quantity <= 5
+                            
+                            val (status, statusColor) = try {
+                                val expireDate = LocalDate.parse(item.expiredDate.split("T")[0])
+                                val today = LocalDate.now()
+                                val daysUntil = ChronoUnit.DAYS.between(today, expireDate)
+                                
+                                when {
+                                    expireDate.isBefore(today) -> "Expired" to Color.Red
+                                    daysUntil <= 3 -> "Nearly Expired" to Color(0xFFF57C00) // Orange
+                                    isLowStock -> "Low Stock" to Color.Red
+                                    else -> "Good" to Color(0xFF00897B)
+                                }
+                            } catch (e: Exception) {
+                                (if (isLowStock) "Low Stock" else "In Stock") to (if (isLowStock) Color.Red else Color(0xFF00897B))
+                            }
+
                             InventoryItemCard(
                                 name = item.foodName,
                                 category = item.foodType,
                                 quantity = "${item.quantity} Bags",
                                 lastUpdated = "Today", // Ideally from API
-                                status = if (item.quantity < 3) "Low Stock" else "In Stock",
-                                onClick = { /* TODO: Detail view */ }
+                                status = status,
+                                statusColor = statusColor,
+                                onClick = {
+                                    selectedItem = item
+                                    showDetail = true
+                                }
                             )
                         }
                     }
@@ -345,10 +384,13 @@ fun InventoryScreen(
             ) {
                 SendRequestContent(
                     userId = userId,
+                    initialType = "Inventory",
+                    canEditType = false,
                     onSuccess = {
                         showRequestSheet = false
                         fetchInventory()
-                    }
+                    },
+                    onCancel = { showRequestSheet = false }
                 )
             }
         }
@@ -360,9 +402,28 @@ fun InventoryScreen(
             ) {
                 SendReportContent(
                     userId = userId,
+                    initialType = "Inventory",
+                    canEditType = false,
                     onSuccess = {
                         showReportSheet = false
                         fetchInventory()
+                    },
+                    onCancel = { showReportSheet = false }
+                )
+            }
+        }
+
+        if (showDetail && selectedItem != null) {
+            ModalBottomSheet(
+                onDismissRequest = { showDetail = false },
+                containerColor = Color.White
+            ) {
+                InventoryDetailContent(
+                    item = selectedItem!!,
+                    userId = userId,
+                    onRefresh = {
+                        fetchInventory()
+                        showDetail = false
                     }
                 )
             }
@@ -412,9 +473,10 @@ fun InventoryItemCard(
     quantity: String,
     lastUpdated: String,
     status: String,
+    statusColor: Color,
     onClick: () -> Unit
 ) {
-    val isLowStock = status == "Low Stock"
+    val isWarning = status == "Low Stock" || status == "Expired" || status == "Nearly Expired"
     
     Card(
         modifier = Modifier
@@ -431,13 +493,13 @@ fun InventoryItemCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (isLowStock) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)),
+                    .background(statusColor.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    if (isLowStock) Icons.Default.Warning else Icons.Default.Inventory,
+                    if (isWarning) Icons.Default.Warning else Icons.Default.Inventory,
                     contentDescription = null,
-                    tint = if (isLowStock) Color.Red else Color(0xFF00897B)
+                    tint = statusColor
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
@@ -446,16 +508,16 @@ fun InventoryItemCard(
                 Text(category, fontSize = 12.sp, color = Color.Gray)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(quantity, fontWeight = FontWeight.Bold, color = if (isLowStock) Color.Red else Color.Black)
+                Text(quantity, fontWeight = FontWeight.Bold, color = if (status == "Low Stock") Color.Red else Color.Black)
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = if (isLowStock) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
+                    color = statusColor.copy(alpha = 0.1f)
                 ) {
                     Text(
                         status,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         fontSize = 10.sp,
-                        color = if (isLowStock) Color.Red else Color(0xFF00897B),
+                        color = statusColor,
                         fontWeight = FontWeight.Bold
                     )
                 }

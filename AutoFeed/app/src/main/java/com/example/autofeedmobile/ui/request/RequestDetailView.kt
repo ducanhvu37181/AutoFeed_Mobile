@@ -26,6 +26,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.RequestData
+import com.example.autofeedmobile.util.formatDate
 
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -136,7 +137,7 @@ fun RequestDetailContent(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.CalendarToday,
                     label = "Date",
-                    value = currentRequest.createdAt?.split("T")?.getOrNull(0) ?: "N/A"
+                    value = formatDate(currentRequest.createdAt)
                 )
             }
 

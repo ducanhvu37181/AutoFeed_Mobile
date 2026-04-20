@@ -1,5 +1,6 @@
 package com.example.autofeedmobile.ui.report
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -28,6 +29,9 @@ import com.example.autofeedmobile.network.ReportData
 import com.example.autofeedmobile.network.RetrofitClient
 import kotlinx.coroutines.launch
 
+import java.text.SimpleDateFormat
+import java.util.*
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
@@ -53,15 +57,42 @@ fun ReportScreen(
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Pending", "Reviewed", "Rejected")
 
+    var dateFilter by remember { mutableStateOf("All Time") }
+    val dateFilters = listOf("All Time", "Last 7 Days", "This Month", "This Year")
+    var showDateFilterMenu by remember { mutableStateOf(false) }
+
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredReports = reports.filter { report ->
         val matchesFilter = if (selectedFilter == "All") true
         else report.status.equals(selectedFilter, ignoreCase = true) ||
                 (selectedFilter == "Reviewed" && (report.status.equals("completed", ignoreCase = true) || report.status.equals("approved", ignoreCase = true) || report.status.equals("reviewed", ignoreCase = true)))
+        
+        val matchesDate = when (dateFilter) {
+            "Last 7 Days" -> {
+                val cal = Calendar.getInstance()
+                cal.add(Calendar.DAY_OF_YEAR, -7)
+                val reportDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(report.createDate?.take(10) ?: "")
+                reportDate?.after(cal.time) ?: false
+            }
+            "This Month" -> {
+                val cal = Calendar.getInstance()
+                val reportDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(report.createDate?.take(10) ?: "")
+                val reportCal = Calendar.getInstance().apply { if (reportDate != null) time = reportDate }
+                reportCal.get(Calendar.MONTH) == cal.get(Calendar.MONTH) && reportCal.get(Calendar.YEAR) == cal.get(Calendar.YEAR)
+            }
+            "This Year" -> {
+                val cal = Calendar.getInstance()
+                val reportDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(report.createDate?.take(10) ?: "")
+                val reportCal = Calendar.getInstance().apply { if (reportDate != null) time = reportDate }
+                reportCal.get(Calendar.YEAR) == cal.get(Calendar.YEAR)
+            }
+            else -> true
+        }
+
         val matchesSearch = report.type.contains(searchQuery, ignoreCase = true) ||
                 report.description.contains(searchQuery, ignoreCase = true)
-        matchesFilter && matchesSearch
+        matchesFilter && matchesSearch && matchesDate
     }.sortedByDescending { it.createDate ?: "" }
 
     // Detail state
@@ -71,6 +102,10 @@ fun ReportScreen(
 
     val detailSheetState = rememberModalBottomSheetState()
     val createSheetState = rememberModalBottomSheetState()
+
+    BackHandler {
+        onBackToProfile()
+    }
 
     fun fetchReports() {
         isLoading = true
@@ -281,15 +316,60 @@ fun ReportScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search reports...") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("Search reports...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+
+                        Box {
+                            OutlinedIconButton(
+                                onClick = { showDateFilterMenu = true },
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.size(56.dp)
+                            ) {
+                                Icon(Icons.Default.FilterList, contentDescription = "Date Filter")
+                            }
+                            DropdownMenu(
+                                expanded = showDateFilterMenu,
+                                onDismissRequest = { showDateFilterMenu = false }
+                            ) {
+                                dateFilters.forEach { filter ->
+                                    DropdownMenuItem(
+                                        text = { Text(filter) },
+                                        onClick = {
+                                            dateFilter = filter
+                                            showDateFilterMenu = false
+                                        },
+                                        trailingIcon = {
+                                            if (dateFilter == filter) {
+                                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (dateFilter != "All Time") {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        InputChip(
+                            selected = true,
+                            onClick = { dateFilter = "All Time" },
+                            label = { Text("Date: $dateFilter") },
+                            trailingIcon = { Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(12.dp))
 

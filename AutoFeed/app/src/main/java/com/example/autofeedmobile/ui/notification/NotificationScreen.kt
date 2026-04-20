@@ -1,5 +1,6 @@
 package com.example.autofeedmobile.ui.notification
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -53,6 +54,10 @@ fun NotificationScreen(
     val context = LocalContext.current
 
     val apiDateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+
+    BackHandler {
+        onBack()
+    }
 
     LaunchedEffect(Unit) {
         scope.launch {

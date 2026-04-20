@@ -1,5 +1,6 @@
 package com.example.autofeedmobile.ui.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +24,10 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToChangePassword: () -> Unit
 ) {
+    BackHandler {
+        onBack()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

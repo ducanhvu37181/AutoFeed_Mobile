@@ -201,50 +201,31 @@ fun ScheduleDetailContent(
             
             Button(
                 onClick = {
-                    if (isPending) {
-                        try {
-                            val apiDateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                            val todayStr = apiDateFormatter.format(Date())
-                            val selectedDateStr = apiDateFormatter.format(selectedDate.time)
+                    val today = Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
+                    val selected = Calendar.getInstance().apply {
+                        time = selectedDate.time
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
 
-                            if (selectedDateStr != todayStr) {
-                                if (selectedDate.time.after(Date())) {
-                                    Toast.makeText(context, "Cannot start a future schedule.", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Cannot start a past schedule.", Toast.LENGTH_SHORT).show()
-                                }
-                            } else {
-                                val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-                                // task.time is "06:00 AM - 07:00 AM" or just "06:00 AM"
-                                val timeStr = task.time ?: ""
-                                val startTimeStr = timeStr.split("-").first().trim()
-                                val endTimeStr = if (timeStr.contains("-")) timeStr.split("-").last().trim() else startTimeStr
+                    if (selected.before(today)) {
+                        Toast.makeText(context, "Cannot update a past schedule.", Toast.LENGTH_SHORT).show()
+                    } else if (isPending) {
+                        val apiDateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        val todayStr = apiDateFormatter.format(Date())
+                        val selectedDateStr = apiDateFormatter.format(selectedDate.time)
 
-                                val startTime = timeFormat.parse(startTimeStr)
-                                val endTime = timeFormat.parse(endTimeStr)
-
-                                val calendar = Calendar.getInstance()
-                                val nowTimeStr = timeFormat.format(calendar.time)
-                                val nowTime = timeFormat.parse(nowTimeStr)
-
-                                if (nowTime != null && startTime != null && endTime != null) {
-                                    when {
-                                        nowTime.before(startTime) -> {
-                                            Toast.makeText(context, "Cannot start early. Please wait until $startTimeStr", Toast.LENGTH_SHORT).show()
-                                        }
-                                        nowTime.after(endTime) -> {
-                                            Toast.makeText(context, "Schedule time has passed. Please contact supervisor.", Toast.LENGTH_SHORT).show()
-                                        }
-                                        else -> {
-                                            onStatusUpdate(nextStatus)
-                                        }
-                                    }
-                                } else {
-                                    onStatusUpdate(nextStatus)
-                                }
-                            }
-                        } catch (e: Exception) {
-                            // Fallback if parsing fails
+                        if (selectedDateStr != todayStr && selected.after(today)) {
+                            Toast.makeText(context, "Cannot start a future schedule.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            // On the same day, we allow starting regardless of the time (lowered requirement)
                             onStatusUpdate(nextStatus)
                         }
                     } else {
