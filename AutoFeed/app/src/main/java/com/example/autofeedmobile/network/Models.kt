@@ -233,6 +233,35 @@ data class LargeChickenListResponse(
     val description: String?
 )
 
+data class BarnData(
+    val barnId: Int,
+    val temperature: Double,
+    val humidity: Double,
+    val foodAmount: Double,
+    val waterAmount: Double,
+    val type: String,
+    val area: Int,
+    val createDate: String,
+    val status: String,
+    val foodToday: Double? = null,
+    val foodWeek: Double? = null,
+    val foodMonth: Double? = null
+)
+
+data class BarnListResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: List<BarnData>,
+    val description: String?
+)
+
+data class BarnDetailResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: BarnData,
+    val description: String?
+)
+
 data class LargeChickenDetailResponse(
     val status: Boolean,
     val httpCode: Int,

@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
@@ -42,10 +43,11 @@ fun ChickenManagementScreen(
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
-    onNavigateToChickenManagement: () -> Unit = {}
+    onNavigateToChickenManagement: () -> Unit = {},
+    onNavigateToBarnManagement: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Flock", "Large Chicken")
+    val tabs = listOf("Chicken", "Large Chicken")
     var showMenu by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -92,6 +94,11 @@ fun ChickenManagementScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToDashboard) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
                 title = {
                     Column {
                         Text("AutoFeed", color = Color.White, fontWeight = FontWeight.Bold)
@@ -158,12 +165,6 @@ fun ChickenManagementScreen(
                     label = { Text("Inventory") },
                     selected = false,
                     onClick = onNavigateToInventory
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
-                    label = { Text("Chicken") },
-                    selected = true,
-                    onClick = {}
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },

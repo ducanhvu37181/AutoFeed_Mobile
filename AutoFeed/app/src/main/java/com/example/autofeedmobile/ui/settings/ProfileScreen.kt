@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -51,6 +53,7 @@ fun ProfileScreen(
     onNavigateToNotifications: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToChickenManagement: () -> Unit = {},
+    onNavigateToBarnManagement: () -> Unit = {},
     onProfileUpdated: (UserResponse) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -196,12 +199,6 @@ fun ProfileScreen(
                     onClick = onNavigateToInventory
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
-                    label = { Text("Chicken") },
-                    selected = false,
-                    onClick = onNavigateToChickenManagement
-                )
-                NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
                     label = { Text("Schedule") },
                     selected = false,
@@ -236,52 +233,82 @@ fun ProfileScreen(
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(100.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFE0F2F1))
-                                    .clickable { showAvatarSheet = true },
-                                contentAlignment = Alignment.Center
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (userData?.avatarUrl != null && userData?.avatarUrl!!.isNotEmpty()) {
-                                    AsyncImage(
-                                        model = userData?.avatarUrl,
-                                        contentDescription = "Avatar",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.Person,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(64.dp),
-                                        tint = Color(0xFF00897B)
-                                    )
-                                }
                                 Box(
                                     modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .size(32.dp)
+                                        .size(80.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF00897B))
-                                        .padding(4.dp)
+                                        .background(Color(0xFFE0F2F1))
+                                        .clickable { showAvatarSheet = true },
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                    if (userData?.avatarUrl != null && userData?.avatarUrl!!.isNotEmpty()) {
+                                        AsyncImage(
+                                            model = userData?.avatarUrl,
+                                            contentDescription = "Avatar",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.Person,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(48.dp),
+                                            tint = Color(0xFF00897B)
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .size(26.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF00897B))
+                                            .padding(4.dp)
+                                    ) {
+                                        Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        userData?.fullName ?: userFullName,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text("Farmer (ID: $userId)", fontSize = 13.sp, color = Color.Gray)
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            userData?.email ?: "",
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF616161),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            userData?.phone ?: "",
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF616161)
+                                        )
+                                    }
                                 }
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(userData?.fullName ?: userFullName, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                            Text("Farmer (ID: $userId)", fontSize = 14.sp, color = Color.Gray)
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(
                                 onClick = { showEditSheet = true },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B)),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))

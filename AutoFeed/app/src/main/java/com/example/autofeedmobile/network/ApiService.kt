@@ -126,4 +126,10 @@ interface ApiService {
         @Path("id") id: Int,
         @Part file: MultipartBody.Part
     ): Response<Unit>
+
+    @GET("api/Barn")
+    suspend fun getBarns(): Response<List<BarnData>>
+
+    @GET("api/Barn/{id}")
+    suspend fun getBarnDetail(@Path("id") id: Int): Response<BarnData>
 }

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -45,7 +46,8 @@ fun RequestScreen(
     onNavigateToSchedule: () -> Unit = {},
     onBackToProfile: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
-    onNavigateToChickenManagement: () -> Unit = {}
+    onNavigateToChickenManagement: () -> Unit = {},
+    onNavigateToBarnManagement: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -240,12 +242,6 @@ fun RequestScreen(
                     label = { Text("Inventory") },
                     selected = false,
                     onClick = onNavigateToInventory
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
-                    label = { Text("Chicken") },
-                    selected = false,
-                    onClick = onNavigateToChickenManagement
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
