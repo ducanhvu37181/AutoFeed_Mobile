@@ -96,14 +96,14 @@ fun BarnDetailView(barnId: Int) {
                 RealTimeDetailCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Restaurant,
-                    label = "Food Level",
+                    label = "Food Amount",
                     value = "${barn!!.foodAmount}g",
                     color = Color(0xFF4CAF50)
                 )
                 RealTimeDetailCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Opacity,
-                    label = "Water Level",
+                    label = "Water Amount",
                     value = "${barn!!.waterAmount}%",
                     color = Color(0xFF03A9F4)
                 )

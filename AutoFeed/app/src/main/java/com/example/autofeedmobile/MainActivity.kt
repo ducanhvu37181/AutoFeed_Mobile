@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
                 var userId by remember { mutableIntStateOf(-1) }
                 var userFullName by remember { mutableStateOf("") }
                 var userAvatarUrl by remember { mutableStateOf<String?>(null) }
+                var hasNewNotifications by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
                     val token = sessionManager.fetchAuthToken()
@@ -92,8 +93,43 @@ class MainActivity : ComponentActivity() {
                             .build()
                         WorkManager.getInstance(context).enqueue(immediateWork)
 
-                        // Periodic check while app is in foreground (every 1 minute for "always" feel)
+                        // Periodic check while app is in foreground
                         while (true) {
+                            // Check for new notifications
+                            try {
+                                val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                val today = fmt.format(java.util.Date())
+                                var found = false
+
+                                val invResp = RetrofitClient.instance.getInventory()
+                                if (invResp.isSuccessful) found = invResp.body()?.data?.any { it.quantity < 3 } == true
+
+                                if (!found) {
+                                    val schedResp = RetrofitClient.instance.getSchedulesByDate(userId, today)
+                                    if (schedResp.isSuccessful) found = schedResp.body()?.data?.any {
+                                        !it.status.equals("Completed", ignoreCase = true) && !it.status.equals("Disabled", ignoreCase = true)
+                                    } == true
+                                }
+
+                                if (!found) {
+                                    val repResp = RetrofitClient.instance.getReports(userId)
+                                    if (repResp.isSuccessful) found = repResp.body()?.data?.any {
+                                        val s = it.status.lowercase()
+                                        s == "reviewed" || s == "approved" || s == "completed" || s == "rejected"
+                                    } == true
+                                }
+
+                                if (!found) {
+                                    val reqResp = RetrofitClient.instance.getRequests(userId)
+                                    if (reqResp.isSuccessful) found = reqResp.body()?.data?.any {
+                                        val s = it.status.lowercase()
+                                        s == "approved" || s == "rejected"
+                                    } == true
+                                }
+
+                                hasNewNotifications = found
+                            } catch (_: Exception) {}
+
                             kotlinx.coroutines.delay(60000)
                             val periodicWork = OneTimeWorkRequestBuilder<NotificationWorker>()
                                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -126,6 +162,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -146,6 +183,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -164,6 +202,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -182,6 +221,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -201,6 +241,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -219,6 +260,7 @@ class MainActivity : ComponentActivity() {
                         ProfileScreen(
                             userId = userId,
                             userFullName = userFullName,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -270,6 +312,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = {
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -289,6 +332,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = {
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)

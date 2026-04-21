@@ -40,6 +40,7 @@ fun InventoryScreen(
     userId: Int,
     userFullName: String,
     userAvatarUrl: String? = null,
+    hasNewNotifications: Boolean = false,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
@@ -98,31 +99,8 @@ fun InventoryScreen(
                     }
                 },
                 actions = {
-                    Box {
-                        IconButton(onClick = onNavigateToNotifications) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
-                        }
-                        if (inventoryList.any { 
-                            val isLowStock = it.quantity <= 5
-                            val isExpired = try {
-                                val expireDate = LocalDate.parse(it.expiredDate.split("T")[0])
-                                expireDate.isBefore(LocalDate.now())
-                            } catch (e: Exception) { false }
-                            val isNearlyExpired = try {
-                                val expireDate = LocalDate.parse(it.expiredDate.split("T")[0])
-                                val daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), expireDate)
-                                daysUntil in 0..3
-                            } catch (e: Exception) { false }
-                            isLowStock || isExpired || isNearlyExpired
-                        }) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(Color.Red, CircleShape)
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = (-8).dp, y = 8.dp)
-                            )
-                        }
+                    IconButton(onClick = onNavigateToNotifications) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
                     Box(
                         modifier = Modifier
