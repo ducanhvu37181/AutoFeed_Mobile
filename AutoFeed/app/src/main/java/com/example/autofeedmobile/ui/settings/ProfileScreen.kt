@@ -460,6 +460,19 @@ fun EditProfileContent(
             }
             Button(
                 onClick = {
+                    if (fullName.isBlank()) {
+                        Toast.makeText(context, "Full name cannot be empty", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    if (email.isBlank()) {
+                        Toast.makeText(context, "Email cannot be empty", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    if (phone.isBlank()) {
+                        Toast.makeText(context, "Phone number cannot be empty", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
                     isSubmitting = true
                     scope.launch {
                         try {
