@@ -58,7 +58,7 @@ fun ReportScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     var selectedFilter by remember { mutableStateOf("All") }
-    val filters = listOf("All", "Pending", "Reviewed", "Rejected")
+    val filters = listOf("All", "Pending", "Reviewed")
 
     var dateFilter by remember { mutableStateOf("All Time") }
     val dateFilters = listOf("All Time", "Last 7 Days", "This Month", "This Year")

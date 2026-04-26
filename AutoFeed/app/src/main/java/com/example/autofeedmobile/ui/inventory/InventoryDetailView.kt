@@ -38,9 +38,9 @@ fun InventoryDetailContent(
     onRefresh: () -> Unit = {}
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
-    var quantity by remember { mutableStateOf(item.quantity.toString()) }
+    var quantity by remember { mutableStateOf((item.quantity ?: 0).toString()) }
     var expiredDate by remember {
-        val datePart = item.expiredDate.split("T")[0]
+        val datePart = (item.expiredDate ?: "").split("T").getOrNull(0) ?: ""
         val parts = datePart.split("-")
         val displayDate = if (parts.size == 3) "${parts[2]}-${parts[1]}-${parts[0]}" else datePart
         mutableStateOf(displayDate)
@@ -90,21 +90,21 @@ fun InventoryDetailContent(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item.foodName,
+                    text = item.foodName ?: "Unknown",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1A1A)
                 )
                 Text(
-                    text = "ID: ${item.inventId}",
+                    text = "ID: ${item.inventId ?: "N/A"}",
                     fontSize = 14.sp,
                     color = Color.Gray
                 )
             }
             
-            val isLowStock = item.quantity <= 5
+            val isLowStock = (item.quantity ?: 0) <= 5
             val (effectiveStatus, statusColor, statusTextColor) = try {
-                val expireDate = LocalDate.parse(item.expiredDate.split("T")[0])
+                val expireDate = LocalDate.parse((item.expiredDate ?: "").split("T").getOrNull(0) ?: "")
                 val today = LocalDate.now()
                 val daysUntil = ChronoUnit.DAYS.between(today, expireDate)
 
@@ -112,11 +112,11 @@ fun InventoryDetailContent(
                     expireDate.isBefore(today) -> Triple("Expired", Color(0xFFFFEBEE), Color(0xFFD32F2F))
                     daysUntil <= 3 -> Triple("Nearly Expired", Color(0xFFFFF3E0), Color(0xFFF57C00))
                     isLowStock -> Triple("Low Stock", Color(0xFFFFF8E1), Color(0xFFFFA000))
-                    else -> Triple("Good", Color(0xFFE8F5E9), Color(0xFF00C853))
+                    else -> Triple("In Stock", Color(0xFFE8F5E9), Color(0xFF00C853))
                 }
             } catch (e: Exception) {
                 if (isLowStock) Triple("Low Stock", Color(0xFFFFF8E1), Color(0xFFFFA000))
-                else Triple("Good", Color(0xFFE8F5E9), Color(0xFF00C853))
+                else Triple("In Stock", Color(0xFFE8F5E9), Color(0xFF00C853))
             }
 
             Surface(
@@ -135,24 +135,24 @@ fun InventoryDetailContent(
 
         // Add a warning message if low stock, nearly expired, or expired
         val isWarning = try {
-            val expireDate = LocalDate.parse(item.expiredDate.split("T")[0])
+            val expireDate = LocalDate.parse((item.expiredDate ?: "").split("T").getOrNull(0) ?: "")
             val daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), expireDate)
-            item.quantity <= 5 || expireDate.isBefore(LocalDate.now()) || daysUntil <= 3
+            (item.quantity ?: 0) <= 5 || expireDate.isBefore(LocalDate.now()) || daysUntil <= 3
         } catch (e: Exception) {
-            item.quantity <= 5
+            (item.quantity ?: 0) <= 5
         }
 
         if (isWarning) {
             Spacer(modifier = Modifier.height(16.dp))
             val warningInfo = try {
-                val expireDate = LocalDate.parse(item.expiredDate.split("T")[0])
+                val expireDate = LocalDate.parse((item.expiredDate ?: "").split("T").getOrNull(0) ?: "")
                 val today = LocalDate.now()
                 val daysUntil = ChronoUnit.DAYS.between(today, expireDate)
                 
                 when {
                     expireDate.isBefore(today) -> "This item has expired!" to Color(0xFFD32F2F)
                     daysUntil <= 3 -> "This item is nearly expired (expires in $daysUntil days)!" to Color(0xFFF57C00)
-                    item.quantity == 0 -> "This item is currently out of stock!" to Color(0xFFD32F2F)
+                    (item.quantity ?: 0) == 0 -> "This item is currently out of stock!" to Color(0xFFD32F2F)
                     else -> "Low stock warning: Please restock soon." to Color(0xFFFFA000)
                 }
             } catch (e: Exception) {
@@ -189,22 +189,22 @@ fun InventoryDetailContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Grid for Main Details
+        // Main Details
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             InventoryDetailCard(
                 modifier = Modifier.weight(1f),
-                icon = Icons.Default.Category,
-                label = "Type",
-                value = item.foodType
+                icon = Icons.Default.CalendarToday,
+                label = "Expires",
+                value = formatDate(item.expiredDate ?: "")
             )
             InventoryDetailCard(
                 modifier = Modifier.weight(1f),
-                icon = Icons.Default.CalendarToday,
-                label = "Expires",
-                value = formatDate(item.expiredDate)
+                icon = Icons.Default.Inventory,
+                label = "Quantity",
+                value = "${item.quantity ?: 0} Bags"
             )
         }
 
@@ -216,16 +216,12 @@ fun InventoryDetailContent(
         ) {
             InventoryDetailCard(
                 modifier = Modifier.weight(1f),
-                icon = Icons.Default.Inventory,
-                label = "Quantity",
-                value = "${item.quantity} Bags"
-            )
-            InventoryDetailCard(
-                modifier = Modifier.weight(1f),
                 icon = Icons.Default.MonitorWeight,
                 label = "Weight/Bag",
-                value = "${item.weightPerBag} kg"
+                value = "${item.weightPerBag ?: 0} kg"
             )
+            // Empty spacer to maintain layout
+            Spacer(modifier = Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -244,7 +240,7 @@ fun InventoryDetailContent(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text("Total Weight", fontSize = 12.sp, color = Color(0xFF00897B))
-                    Text("${item.totalWeight} kg", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF004D40))
+                    Text("${item.totalWeight ?: 0} kg", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF004D40))
                 }
             }
         }
@@ -260,21 +256,26 @@ fun InventoryDetailContent(
                 Column {
                     OutlinedTextField(
                         value = quantity,
-                        onValueChange = { quantity = it },
+                        onValueChange = { if (it.all { char -> char.isDigit() }) quantity = it },
                         label = { Text("Quantity") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = expiredDate,
-                        onValueChange = { expiredDate = it },
-                        label = { Text("Expired Date (DD-MM-YYYY)") },
+                        onValueChange = { },
+                        label = { Text("Expired Date") },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("31-12-2024") }
+                        readOnly = true,
+                        enabled = false
                     )
                 }
             },
             confirmButton = {
+                val isQuantityValid = quantity.isNotBlank() && quantity.toIntOrNull() != null
                 Button(
                     onClick = {
                         isUpdating = true
@@ -289,12 +290,12 @@ fun InventoryDetailContent(
                                 }
 
                                 val response = RetrofitClient.instance.updateInventory(
-                                    item.inventId,
-                                    UpdateInventoryDto(quantity.toInt(), apiDate)
+                                    item.inventId ?: 0,
+                                    UpdateInventoryDto(quantity.toIntOrNull() ?: 0, apiDate)
                                 )
                                 if (response.isSuccessful) {
                                     // Automatically send report
-                                    val description = "Update stock for ${item.foodName}: quantity and expireDate after update: $quantity, $expiredDate"
+                                    val description = "Update stock for ${item.foodName ?: "Unknown"}: quantity after update is $quantity Bags"
                                     val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
                                     val reportTypePart = "Inventory".toRequestBody("text/plain".toMediaTypeOrNull())
                                     val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -316,7 +317,7 @@ fun InventoryDetailContent(
                             }
                         }
                     },
-                    enabled = !isUpdating
+                    enabled = !isUpdating && isQuantityValid
                 ) {
                     if (isUpdating) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
                     else Text("Update")

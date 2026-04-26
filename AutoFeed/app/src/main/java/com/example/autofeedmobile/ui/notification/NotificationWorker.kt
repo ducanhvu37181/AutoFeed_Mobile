@@ -24,25 +24,6 @@ class NotificationWorker(context: Context, params: WorkerParameters) : Coroutine
         val apiService = RetrofitClient.instance
 
         try {
-            // 1. Inventory
-            val invResponse = apiService.getInventory()
-            if (invResponse.isSuccessful) {
-                invResponse.body()?.data?.forEach { item ->
-                    if (item.quantity < 3) {
-                        val key = "inv_${item.inventId}_low"
-                        if (NotificationHelper.shouldNotify(applicationContext, key)) {
-                            NotificationHelper.showNotification(
-                                applicationContext,
-                                if (item.quantity == 0) "Out of Stock" else "Low Stock",
-                                "${item.foodName} is low in stock (${item.quantity})",
-                                item.inventId
-                            )
-                            NotificationHelper.markAsNotified(applicationContext, key)
-                        }
-                    }
-                }
-            }
-
             // 2. Schedules
             val schedResponse = apiService.getSchedules(userId)
             if (schedResponse.isSuccessful) {
@@ -101,12 +82,12 @@ class NotificationWorker(context: Context, params: WorkerParameters) : Coroutine
                         val key = "rep_${report.reportId}_$status"
                         if (NotificationHelper.shouldNotify(applicationContext, key)) {
                             val isRejected = status == "rejected"
-                            val title = if (isRejected) "Report Rejected" else "Report Reviewed"
-                            val displayStatus = if (isRejected) "rejected" else "Reviewed"
+                            val title = if (isRejected) "Report Rejected" else "Report Updated"
+                            val displayStatus = status.replaceFirstChar { it.uppercase() }
                             NotificationHelper.showNotification(
                                 applicationContext,
                                 title,
-                                "Your report '${report.type}' is now $displayStatus",
+                                "Your report #${report.reportId} ('${report.type}') is now $displayStatus",
                                 report.reportId + 3000
                             )
                             NotificationHelper.markAsNotified(applicationContext, key)

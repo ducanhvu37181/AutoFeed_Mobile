@@ -289,7 +289,7 @@ fun DashboardScreen(
             ) {
                 // Summary Cards Grid
                 item {
-                    val criticalStockCount = inventoryList.count { it.quantity < 3 }
+                    val criticalStockCount = inventoryList.count { (it.quantity ?: 0) < 3 }
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SummaryCard(

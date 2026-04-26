@@ -101,15 +101,10 @@ class MainActivity : ComponentActivity() {
                                 val today = fmt.format(java.util.Date())
                                 var found = false
 
-                                val invResp = RetrofitClient.instance.getInventory()
-                                if (invResp.isSuccessful) found = invResp.body()?.data?.any { it.quantity < 3 } == true
-
-                                if (!found) {
-                                    val schedResp = RetrofitClient.instance.getSchedulesByDate(userId, today)
-                                    if (schedResp.isSuccessful) found = schedResp.body()?.data?.any {
-                                        !it.status.equals("Completed", ignoreCase = true) && !it.status.equals("Disabled", ignoreCase = true)
-                                    } == true
-                                }
+                                val schedResp = RetrofitClient.instance.getSchedulesByDate(userId, today)
+                                if (schedResp.isSuccessful) found = schedResp.body()?.data?.any {
+                                    !it.status.equals("Completed", ignoreCase = true) && !it.status.equals("Disabled", ignoreCase = true)
+                                } == true
 
                                 if (!found) {
                                     val repResp = RetrofitClient.instance.getReports(userId)

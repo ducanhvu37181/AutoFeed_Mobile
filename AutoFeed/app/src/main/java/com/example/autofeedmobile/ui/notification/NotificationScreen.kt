@@ -62,34 +62,15 @@ fun NotificationScreen(
     LaunchedEffect(Unit) {
         scope.launch {
             try {
-                val inventoryDeferred = async { RetrofitClient.instance.getInventory() }
                 val schedulesDeferred = async { RetrofitClient.instance.getSchedulesByDate(userId, apiDateFormatter.format(Date())) }
                 val reportsDeferred = async { RetrofitClient.instance.getReports(userId) }
                 val requestsDeferred = async { RetrofitClient.instance.getRequests(userId) }
 
-                val inventoryResponse = inventoryDeferred.await()
                 val schedulesResponse = schedulesDeferred.await()
                 val reportsResponse = reportsDeferred.await()
                 val requestsResponse = requestsDeferred.await()
 
                 val newNotifications = mutableListOf<AppNotification>()
-
-                // 1. Inventory
-                if (inventoryResponse.isSuccessful) {
-                    inventoryResponse.body()?.data?.forEach { item ->
-                        if (item.quantity < 3) {
-                            val title = if (item.quantity == 0) "Out of Stock" else "Low Stock"
-                            val msg = "${item.foodName} is low in stock (${item.quantity})"
-                            newNotifications.add(AppNotification(title, msg, Color(0xFFFFEBEE), Color.Red, "Inventory"))
-                            
-                            val key = "inv_${item.inventId}_low"
-                            if (NotificationHelper.shouldNotify(context, key)) {
-                                NotificationHelper.showNotification(context, title, msg, item.inventId)
-                                NotificationHelper.markAsNotified(context, key)
-                            }
-                        }
-                    }
-                }
 
                 // 2. Schedules
                 if (schedulesResponse.isSuccessful) {

@@ -36,6 +36,8 @@ import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.ScheduleData
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -107,11 +109,25 @@ fun ScheduleScreen(
     }
 
     // Function to update status
-    fun updateStatus(id: Int, newStatus: String) {
+    fun updateStatus(id: Int, newStatus: String, taskTitle: String = "") {
         scope.launch {
             try {
                 val response = RetrofitClient.instance.updateScheduleStatus(id, newStatus)
                 if (response.isSuccessful) {
+                    if (newStatus == "Completed") {
+                        // Automatically send report for completed schedule
+                        val description = "Schedule '$taskTitle' (ID: $id) has been completed."
+                        val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                        val reportTypePart = "Schedule".toRequestBody("text/plain".toMediaTypeOrNull())
+                        val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
+                        
+                        RetrofitClient.instance.createReport(
+                            userId = userIdPart,
+                            type = reportTypePart,
+                            description = descriptionPart,
+                            file = null
+                        )
+                    }
                     fetchSchedules() // Refresh list
                 }
             } catch (e: Exception) {
@@ -413,7 +429,7 @@ fun ScheduleScreen(
                                     } else if (isPending && selectedDateStr != todayStr && selected.after(today)) {
                                         Toast.makeText(context, "Cannot start a future schedule.", Toast.LENGTH_SHORT).show()
                                     } else {
-                                        updateStatus(data.schedId, nextStatus)
+                                        updateStatus(data.schedId, nextStatus, data.taskTitle)
                                     }
                                 }
                             )

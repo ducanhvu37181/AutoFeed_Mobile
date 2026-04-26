@@ -98,15 +98,15 @@ data class RequestDetailResponse(
 )
 
 data class InventoryData(
-    val inventId: Int,
-    val foodId: Int,
-    val foodName: String,
-    val foodType: String,
-    val quantity: Int,
-    val weightPerBag: Int,
-    val totalWeight: Int,
-    val expiredDate: String,
-    val status: String
+    val inventId: Int?,
+    val foodId: Int?,
+    val foodName: String?,
+    val foodType: String?,
+    val quantity: Int?,
+    val weightPerBag: Int?,
+    val totalWeight: Int?,
+    val expiredDate: String?,
+    val status: String?
 )
 
 data class InventoryListResponse(
@@ -219,6 +219,11 @@ data class UpdateFlockDto(
     val name: String,
     val healthStatus: String,
     val note: String?
+)
+
+data class TransferFlockDto(
+    val sourceFlockId: Int,
+    val targetFlockId: Int
 )
 
 data class UpdateInventoryDto(

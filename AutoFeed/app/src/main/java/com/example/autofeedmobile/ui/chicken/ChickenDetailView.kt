@@ -16,13 +16,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.automirrored.filled.Send
 import coil.compose.AsyncImage
 import androidx.compose.runtime.*
 import com.example.autofeedmobile.network.FlockData
 import com.example.autofeedmobile.network.LargeChickenData
 import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.network.TransferFlockDto
 import com.example.autofeedmobile.util.formatDate
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +34,8 @@ fun FlockDetailView(userId: Int, flockId: Int, onRefresh: () -> Unit = {}) {
     var flock by remember { mutableStateOf<FlockData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showEditSheet by remember { mutableStateOf(false) }
+    var showTransferDialog by remember { mutableStateOf(false) }
+    var showTransferBackDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     fun fetchDetail() {
@@ -60,7 +66,9 @@ fun FlockDetailView(userId: Int, flockId: Int, onRefresh: () -> Unit = {}) {
         Column {
             FlockDetailContent(
                 flock = flock!!,
-                onEditClick = { showEditSheet = true }
+                onEditClick = { showEditSheet = true },
+                onTransferClick = { showTransferDialog = true },
+                onTransferBackClick = { showTransferBackDialog = true }
             )
         }
 
@@ -81,7 +89,164 @@ fun FlockDetailView(userId: Int, flockId: Int, onRefresh: () -> Unit = {}) {
                 )
             }
         }
+
+        if (showTransferDialog) {
+            TransferFlockDialog(
+                userId = userId,
+                sourceFlock = flock!!,
+                onDismiss = { showTransferDialog = false },
+                onSuccess = {
+                    showTransferDialog = false
+                    fetchDetail()
+                    onRefresh()
+                }
+            )
+        }
+
+        if (showTransferBackDialog) {
+            TransferBackFlockDialog(
+                userId = userId,
+                sourceFlock = flock!!,
+                onDismiss = { showTransferBackDialog = false },
+                onSuccess = {
+                    showTransferBackDialog = false
+                    fetchDetail()
+                    onRefresh()
+                }
+            )
+        }
     }
+}
+
+@Composable
+fun TransferBackFlockDialog(
+    userId: Int,
+    sourceFlock: FlockData,
+    onDismiss: () -> Unit,
+    onSuccess: () -> Unit
+) {
+    var availableFlocks by remember { mutableStateOf<List<FlockData>>(emptyList()) }
+    var selectedFlock by remember { mutableStateOf<FlockData?>(null) }
+    var isLoadingFlocks by remember { mutableStateOf(true) }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        try {
+            val response = RetrofitClient.instance.getFlocks()
+            if (response.isSuccessful) {
+                // Filter: Healthy AND isActive AND not the same flock
+                availableFlocks = response.body()?.data?.filter {
+                    it.healthStatus.contains("Healthy", ignoreCase = true) && 
+                    it.isActive &&
+                    it.flockId != sourceFlock.flockId
+                } ?: emptyList()
+            }
+        } catch (e: Exception) {
+            // Error
+        } finally {
+            isLoadingFlocks = false
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Move Back to Healthy Flock", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "Select an active healthy flock to move this recovered flock back to.",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (isLoadingFlocks) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                } else if (availableFlocks.isEmpty()) {
+                    Text("No healthy flocks available.", color = Color.Red, fontSize = 14.sp)
+                } else {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = selectedFlock?.name ?: "Select Flock",
+                            onValueChange = {},
+                            readOnly = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                IconButton(onClick = { expanded = !expanded }) {
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.fillMaxWidth(0.8f)
+                        ) {
+                            availableFlocks.forEach { flock ->
+                                DropdownMenuItem(
+                                    text = { Text("${flock.name} (Qty: ${flock.quantity})") },
+                                    onClick = {
+                                        selectedFlock = flock
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (selectedFlock != null) {
+                        isSubmitting = true
+                        scope.launch {
+                            try {
+                                val response = RetrofitClient.instance.transferBackToFlock(
+                                    TransferFlockDto(
+                                        sourceFlockId = sourceFlock.flockId,
+                                        targetFlockId = selectedFlock!!.flockId
+                                    )
+                                )
+                                if (response.isSuccessful) {
+                                    // Automatically send report
+                                    try {
+                                        val typeBody = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val descBody = "System: Recovered flock '${sourceFlock.name}' (ID: ${sourceFlock.flockId}) has been moved back to active healthy flock '${selectedFlock!!.name}' (ID: ${selectedFlock!!.flockId}).".toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val userIdBody = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                                        RetrofitClient.instance.createReport(userIdBody, typeBody, descBody, null)
+                                    } catch (e: Exception) {
+                                        // Ignore report error
+                                    }
+                                    onSuccess()
+                                }
+                            } catch (e: Exception) {
+                                // Handle error
+                            } finally {
+                                isSubmitting = false
+                            }
+                        }
+                    }
+                },
+                enabled = selectedFlock != null && !isSubmitting,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White)
+                } else {
+                    Text("Move Back")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -145,9 +310,143 @@ fun LargeChickenDetailView(userId: Int, chickenId: Int, onRefresh: () -> Unit = 
 }
 
 @Composable
+fun TransferFlockDialog(
+    userId: Int,
+    sourceFlock: FlockData,
+    onDismiss: () -> Unit,
+    onSuccess: () -> Unit
+) {
+    var availableFlocks by remember { mutableStateOf<List<FlockData>>(emptyList()) }
+    var selectedFlock by remember { mutableStateOf<FlockData?>(null) }
+    var isLoadingFlocks by remember { mutableStateOf(true) }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        try {
+            val response = RetrofitClient.instance.getFlocks()
+            if (response.isSuccessful) {
+                // Filter: quantity = 0 AND healthy AND isActive AND not the same flock
+                availableFlocks = response.body()?.data?.filter {
+                    it.quantity == 0 && 
+                    it.healthStatus.contains("Healthy", ignoreCase = true) && 
+                    it.isActive &&
+                    it.flockId != sourceFlock.flockId
+                } ?: emptyList()
+            }
+        } catch (e: Exception) {
+            // Error
+        } finally {
+            isLoadingFlocks = false
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Transfer Sick Flock", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "Select a designated flock to move the sick flock to.",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (isLoadingFlocks) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                } else if (availableFlocks.isEmpty()) {
+                    Text("No suitable flocks available for transfer.", color = Color.Red, fontSize = 14.sp)
+                } else {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = selectedFlock?.name ?: "Select Flock",
+                            onValueChange = {},
+                            readOnly = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                IconButton(onClick = { expanded = !expanded }) {
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.fillMaxWidth(0.8f)
+                        ) {
+                            availableFlocks.forEach { flock ->
+                                DropdownMenuItem(
+                                    text = { Text("${flock.name} (ID: ${flock.flockId})") },
+                                    onClick = {
+                                        selectedFlock = flock
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (selectedFlock != null) {
+                        isSubmitting = true
+                        scope.launch {
+                            try {
+                                val response = RetrofitClient.instance.transferFlock(
+                                    TransferFlockDto(
+                                        sourceFlockId = sourceFlock.flockId,
+                                        targetFlockId = selectedFlock!!.flockId
+                                    )
+                                )
+                                if (response.isSuccessful) {
+                                    // Automatically send report
+                                    try {
+                                        val typeBody = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val descBody = "System: Sick flock '${sourceFlock.name}' (ID: ${sourceFlock.flockId}) has been moved to empty flock '${selectedFlock!!.name}' (ID: ${selectedFlock!!.flockId}) for isolation.".toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val userIdBody = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                                        RetrofitClient.instance.createReport(userIdBody, typeBody, descBody, null)
+                                    } catch (e: Exception) {
+                                        // Ignore report error
+                                    }
+                                    onSuccess()
+                                }
+                            } catch (e: Exception) {
+                                // Handle error
+                            } finally {
+                                isSubmitting = false
+                            }
+                        }
+                    }
+                },
+                enabled = selectedFlock != null && !isSubmitting,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B))
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White)
+                } else {
+                    Text("Transfer")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
 fun FlockDetailContent(
     flock: FlockData,
-    onEditClick: () -> Unit = {}
+    onEditClick: () -> Unit = {},
+    onTransferClick: () -> Unit = {},
+    onTransferBackClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -166,19 +465,49 @@ fun FlockDetailContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Edit Button Row
-        if (flock.isActive) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
+        // Action Buttons Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Transfer Button for Sick Flock
+            if (flock.isActive && flock.healthStatus.contains("Sick", ignoreCase = true)) {
+                if (flock.quantity == 1) {
+                    Button(
+                        onClick = onTransferBackClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Move Back to Flock", fontSize = 12.sp)
+                    }
+                } else {
+                    Button(
+                        onClick = onTransferClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Move Sick Flock", fontSize = 12.sp)
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+
+            if (flock.isActive) {
                 TextButton(
                     onClick = onEditClick,
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF00897B))
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF00897B)),
+                    modifier = Modifier.height(36.dp)
                 ) {
                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Edit Details")
+                    Text("Edit Details", fontSize = 12.sp)
                 }
             }
         }
