@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -57,6 +58,7 @@ fun DashboardScreen(
     userId: Int,
     userFullName: String,
     userAvatarUrl: String? = null,
+    hasNewNotifications: Boolean = false,
     onLogout: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
@@ -64,11 +66,13 @@ fun DashboardScreen(
     onNavigateToNotifications: () -> Unit = {},
     onNavigateToRequests: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
-    onNavigateToChickenManagement: () -> Unit = {}
+    onNavigateToChickenManagement: () -> Unit = {},
+    onNavigateToBarnManagement: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
     var inventoryList by remember { mutableStateOf<List<InventoryData>>(emptyList()) }
+    var barns by remember { mutableStateOf<List<com.example.autofeedmobile.network.BarnData>>(emptyList()) }
     var reports by remember { mutableStateOf<List<ReportData>>(emptyList()) }
     var requests by remember { mutableStateOf<List<RequestData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -136,6 +140,12 @@ fun DashboardScreen(
                 if (requestResponse.isSuccessful) {
                     requests = requestResponse.body()?.data ?: emptyList()
                 }
+
+                // Fetch Barns for Summary
+                val barnResponse = RetrofitClient.instance.getBarns()
+                if (barnResponse.isSuccessful) {
+                    barns = barnResponse.body() ?: emptyList()
+                }
             } catch (e: Exception) {
                 // handle error
             } finally {
@@ -171,19 +181,8 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
-                    Box {
-                        IconButton(onClick = onNavigateToNotifications) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
-                        }
-                        if (inventoryList.any { it.quantity < 3 }) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(Color.Red, CircleShape)
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = (-8).dp, y = 8.dp)
-                            )
-                        }
+                    IconButton(onClick = onNavigateToNotifications) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
                     Box(
                         modifier = Modifier
@@ -266,12 +265,6 @@ fun DashboardScreen(
                     onClick = onNavigateToInventory
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
-                    label = { Text("Chicken") },
-                    selected = false,
-                    onClick = onNavigateToChickenManagement
-                )
-                NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
                     label = { Text("Schedule") },
                     selected = false,
@@ -296,7 +289,7 @@ fun DashboardScreen(
             ) {
                 // Summary Cards Grid
                 item {
-                    val criticalStockCount = inventoryList.count { it.quantity < 3 }
+                    val criticalStockCount = inventoryList.count { (it.quantity ?: 0) < 3 }
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SummaryCard(
@@ -332,6 +325,24 @@ fun DashboardScreen(
                                 iconColor = Color(0xFFFF5722),
                                 value = "${requests.size}",
                                 label = "My Request"
+                            )
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            SummaryCard(
+                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToBarnManagement),
+                                icon = Icons.Default.Home,
+                                iconContainerColor = Color(0xFF00897B).copy(alpha = 0.1f),
+                                iconColor = Color(0xFF00897B),
+                                value = "${barns.size}",
+                                label = "Total Barns"
+                            )
+                            SummaryCard(
+                                modifier = Modifier.weight(1f).clickable(onClick = onNavigateToChickenManagement),
+                                icon = Icons.AutoMirrored.Filled.List,
+                                iconContainerColor = Color(0xFF795548).copy(alpha = 0.1f),
+                                iconColor = Color(0xFF795548),
+                                value = "Live",
+                                label = "Chickens"
                             )
                         }
                     }

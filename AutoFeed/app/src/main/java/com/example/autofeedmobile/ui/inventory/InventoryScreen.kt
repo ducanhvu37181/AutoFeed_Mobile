@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,15 +40,18 @@ fun InventoryScreen(
     userId: Int,
     userFullName: String,
     userAvatarUrl: String? = null,
+    hasNewNotifications: Boolean = false,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
-    onNavigateToChickenManagement: () -> Unit = {}
+    onNavigateToChickenManagement: () -> Unit = {},
+    onNavigateToBarnManagement: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var filterStatus by remember { mutableStateOf("All") } // "All", "In Stock", "Low Stock", "Expired"
     
     val scope = rememberCoroutineScope()
     var inventoryList by remember { mutableStateOf<List<InventoryData>>(emptyList()) }
@@ -96,31 +100,8 @@ fun InventoryScreen(
                     }
                 },
                 actions = {
-                    Box {
-                        IconButton(onClick = onNavigateToNotifications) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
-                        }
-                        if (inventoryList.any { 
-                            val isLowStock = it.quantity <= 5
-                            val isExpired = try {
-                                val expireDate = LocalDate.parse(it.expiredDate.split("T")[0])
-                                expireDate.isBefore(LocalDate.now())
-                            } catch (e: Exception) { false }
-                            val isNearlyExpired = try {
-                                val expireDate = LocalDate.parse(it.expiredDate.split("T")[0])
-                                val daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), expireDate)
-                                daysUntil in 0..3
-                            } catch (e: Exception) { false }
-                            isLowStock || isExpired || isNearlyExpired
-                        }) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(Color.Red, CircleShape)
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = (-8).dp, y = 8.dp)
-                            )
-                        }
+                    IconButton(onClick = onNavigateToNotifications) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
                     Box(
                         modifier = Modifier
@@ -202,12 +183,6 @@ fun InventoryScreen(
                     onClick = {}
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
-                    label = { Text("Chicken") },
-                    selected = false,
-                    onClick = onNavigateToChickenManagement
-                )
-                NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
                     label = { Text("Schedule") },
                     selected = false,
@@ -271,30 +246,53 @@ fun InventoryScreen(
                 .fillMaxSize()
                 .background(Color(0xFFF5F5F5))
         ) {
+            // Summary Data Calculation
+            val today = LocalDate.now()
+            val counts = inventoryList.map { item ->
+                val isLowStock = (item.quantity ?: 0) <= 5
+                try {
+                    val expireDate = LocalDate.parse(item.expiredDate?.split("T")?.get(0) ?: "")
+                    when {
+                        expireDate.isBefore(today) -> "Expired"
+                        isLowStock -> "Low Stock"
+                        else -> "In Stock"
+                    }
+                } catch (e: Exception) {
+                    if (isLowStock) "Low Stock" else "In Stock"
+                }
+            }.groupingBy { it }.eachCount()
+
             // Summary Row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 InventorySummaryCard(
                     modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Inventory,
-                    label = "Items",
-                    value = inventoryList.size.toString(),
-                    color = Color(0xFFE3F2FD)
+                    icon = Icons.Default.CheckCircle,
+                    label = "In Stock",
+                    value = (counts["In Stock"] ?: 0).toString(),
+                    color = Color(0xFFE8F5E9)
                 )
                 InventorySummaryCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Warning,
                     label = "Low Stock",
-                    value = inventoryList.count { it.quantity <= 5 }.toString(),
+                    value = (counts["Low Stock"] ?: 0).toString(),
                     color = Color(0xFFFFF3E0)
+                )
+                InventorySummaryCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Dangerous,
+                    label = "Expired",
+                    value = (counts["Expired"] ?: 0).toString(),
+                    color = Color(0xFFFFEBEE)
                 )
             }
 
-            // Search Bar
+            // Search and Filter Bar
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -302,17 +300,36 @@ fun InventoryScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    placeholder = { Text("Search inventory...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
+                Column(modifier = Modifier.padding(12.dp)) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search inventory...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("All", "In Stock", "Low Stock", "Expired").forEach { status ->
+                            FilterChip(
+                                selected = filterStatus == status,
+                                onClick = { filterStatus = status },
+                                label = { Text(status, fontSize = 12.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Color(0xFF00897B),
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
+                    }
+                }
             }
 
             // Inventory List
@@ -326,9 +343,45 @@ fun InventoryScreen(
                 }
             } else {
                 val filteredList = inventoryList.filter { 
-                    it.foodName.contains(searchQuery, ignoreCase = true) || 
-                    it.foodType.contains(searchQuery, ignoreCase = true)
-                }
+                    val matchesSearch = (it.foodName?.contains(searchQuery, ignoreCase = true) ?: false) || 
+                                       (it.foodType?.contains(searchQuery, ignoreCase = true) ?: false)
+                    
+                    if (!matchesSearch) return@filter false
+                    
+                    val isLowStock = (it.quantity ?: 0) <= 5
+                    val status = try {
+                        val expireDate = LocalDate.parse(it.expiredDate?.split("T")?.get(0) ?: "")
+                        val today = LocalDate.now()
+                        when {
+                            expireDate.isBefore(today) -> "Expired"
+                            isLowStock -> "Low Stock"
+                            else -> "In Stock"
+                        }
+                    } catch (e: Exception) {
+                        if (isLowStock) "Low Stock" else "In Stock"
+                    }
+                    
+                    when (filterStatus) {
+                        "All" -> true
+                        "In Stock" -> status == "In Stock"
+                        "Low Stock" -> status == "Low Stock"
+                        "Expired" -> status == "Expired"
+                        else -> true
+                    }
+                }.sortedWith(compareByDescending<InventoryData> { 
+                    val isLowStock = (it.quantity ?: 0) <= 5
+                    try {
+                        val expireDate = LocalDate.parse(it.expiredDate?.split("T")?.get(0) ?: "")
+                        val today = LocalDate.now()
+                        when {
+                            expireDate.isBefore(today) -> 0 // Expired last
+                            isLowStock -> 1 // Low Stock middle
+                            else -> 2 // In Stock first
+                        }
+                    } catch (e: Exception) {
+                        if (isLowStock) 1 else 2
+                    }
+                }.thenBy { it.foodName })
 
                 if (filteredList.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -341,10 +394,10 @@ fun InventoryScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(filteredList) { item ->
-                            val isLowStock = item.quantity <= 5
+                            val isLowStock = (item.quantity ?: 0) <= 5
                             
                             val (status, statusColor) = try {
-                                val expireDate = LocalDate.parse(item.expiredDate.split("T")[0])
+                                val expireDate = LocalDate.parse(item.expiredDate?.split("T")?.get(0) ?: "")
                                 val today = LocalDate.now()
                                 val daysUntil = ChronoUnit.DAYS.between(today, expireDate)
                                 
@@ -352,16 +405,16 @@ fun InventoryScreen(
                                     expireDate.isBefore(today) -> "Expired" to Color.Red
                                     daysUntil <= 3 -> "Nearly Expired" to Color(0xFFF57C00) // Orange
                                     isLowStock -> "Low Stock" to Color.Red
-                                    else -> "Good" to Color(0xFF00897B)
+                                    else -> "In Stock" to Color(0xFF00897B)
                                 }
                             } catch (e: Exception) {
                                 (if (isLowStock) "Low Stock" else "In Stock") to (if (isLowStock) Color.Red else Color(0xFF00897B))
                             }
 
                             InventoryItemCard(
-                                name = item.foodName,
-                                category = item.foodType,
-                                quantity = "${item.quantity} Bags",
+                                name = item.foodName ?: "Unknown",
+                                category = item.foodType ?: "Uncategorized",
+                                quantity = "${item.quantity ?: 0} Bags",
                                 lastUpdated = "Today", // Ideally from API
                                 status = status,
                                 statusColor = statusColor,
@@ -444,24 +497,33 @@ fun InventorySummaryCard(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(32.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(color),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = Color(0xFF00897B))
+                Icon(icon, contentDescription = null, tint = Color(0xFF00897B), modifier = Modifier.size(18.dp))
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(label, fontSize = 12.sp, color = Color.Gray)
-                Text(value, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                color = Color.Gray,
+                maxLines = 1
+            )
         }
     }
 }
@@ -505,7 +567,6 @@ fun InventoryItemCard(
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(category, fontSize = 12.sp, color = Color.Gray)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(quantity, fontWeight = FontWeight.Bold, color = if (status == "Low Stock") Color.Red else Color.Black)

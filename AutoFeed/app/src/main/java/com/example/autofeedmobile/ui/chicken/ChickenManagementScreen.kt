@@ -8,8 +8,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -28,6 +30,7 @@ import java.util.Locale
 import com.example.autofeedmobile.network.FlockData
 import com.example.autofeedmobile.network.LargeChickenData
 import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.network.TransferFlockDto
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,16 +39,18 @@ fun ChickenManagementScreen(
     userId: Int,
     userFullName: String,
     userAvatarUrl: String? = null,
+    hasNewNotifications: Boolean = false,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
-    onNavigateToChickenManagement: () -> Unit = {}
+    onNavigateToChickenManagement: () -> Unit = {},
+    onNavigateToBarnManagement: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Flock", "Large Chicken")
+    val tabs = listOf("Chicken", "Large Chicken")
     var showMenu by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -92,6 +97,11 @@ fun ChickenManagementScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToDashboard) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
                 title = {
                     Column {
                         Text("AutoFeed", color = Color.White, fontWeight = FontWeight.Bold)
@@ -160,12 +170,6 @@ fun ChickenManagementScreen(
                     onClick = onNavigateToInventory
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
-                    label = { Text("Chicken") },
-                    selected = true,
-                    onClick = {}
-                )
-                NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
                     label = { Text("Schedule") },
                     selected = false,
@@ -206,19 +210,25 @@ fun ChickenManagementScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                val currentFilterOptions = if (selectedTab == 0) flockFilterOptions else chickenFilterOptions
-                currentFilterOptions.forEach { option ->
-                    FilterChip(
-                        selected = statusFilter == option,
-                        onClick = { statusFilter = option },
-                        label = { Text(option) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF00897B).copy(alpha = 0.1f),
-                            selectedLabelColor = Color(0xFF00897B)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    val currentFilterOptions = if (selectedTab == 0) flockFilterOptions else chickenFilterOptions
+                    currentFilterOptions.forEach { option ->
+                        FilterChip(
+                            selected = statusFilter == option,
+                            onClick = { statusFilter = option },
+                            label = { Text(option) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFF00897B).copy(alpha = 0.1f),
+                                selectedLabelColor = Color(0xFF00897B)
+                            )
                         )
-                    )
+                    }
                 }
             }
 

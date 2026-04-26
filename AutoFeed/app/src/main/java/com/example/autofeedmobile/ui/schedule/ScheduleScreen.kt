@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +36,8 @@ import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.ScheduleData
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -44,12 +47,14 @@ fun ScheduleScreen(
     userId: Int,
     userFullName: String,
     userAvatarUrl: String? = null,
+    hasNewNotifications: Boolean = false,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
-    onNavigateToChickenManagement: () -> Unit = {}
+    onNavigateToChickenManagement: () -> Unit = {},
+    onNavigateToBarnManagement: () -> Unit = {}
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Pending", "In Progress", "Completed")
@@ -104,11 +109,25 @@ fun ScheduleScreen(
     }
 
     // Function to update status
-    fun updateStatus(id: Int, newStatus: String) {
+    fun updateStatus(id: Int, newStatus: String, taskTitle: String = "") {
         scope.launch {
             try {
                 val response = RetrofitClient.instance.updateScheduleStatus(id, newStatus)
                 if (response.isSuccessful) {
+                    if (newStatus == "Completed") {
+                        // Automatically send report for completed schedule
+                        val description = "Schedule '$taskTitle' (ID: $id) has been completed."
+                        val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                        val reportTypePart = "Schedule".toRequestBody("text/plain".toMediaTypeOrNull())
+                        val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
+                        
+                        RetrofitClient.instance.createReport(
+                            userId = userIdPart,
+                            type = reportTypePart,
+                            description = descriptionPart,
+                            file = null
+                        )
+                    }
                     fetchSchedules() // Refresh list
                 }
             } catch (e: Exception) {
@@ -146,19 +165,8 @@ fun ScheduleScreen(
                     }
                 },
                 actions = {
-                    Box {
-                        IconButton(onClick = onNavigateToNotifications) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
-                        }
-                        if (inventoryList.any { it.quantity < 3 }) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(Color.Red, CircleShape)
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = (-8).dp, y = 8.dp)
-                            )
-                        }
+                    IconButton(onClick = onNavigateToNotifications) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
                     Box(
                         modifier = Modifier
@@ -238,12 +246,6 @@ fun ScheduleScreen(
                     label = { Text("Inventory") },
                     selected = false,
                     onClick = onNavigateToInventory
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
-                    label = { Text("Chicken") },
-                    selected = false,
-                    onClick = onNavigateToChickenManagement
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },
@@ -427,7 +429,7 @@ fun ScheduleScreen(
                                     } else if (isPending && selectedDateStr != todayStr && selected.after(today)) {
                                         Toast.makeText(context, "Cannot start a future schedule.", Toast.LENGTH_SHORT).show()
                                     } else {
-                                        updateStatus(data.schedId, nextStatus)
+                                        updateStatus(data.schedId, nextStatus, data.taskTitle)
                                     }
                                 }
                             )

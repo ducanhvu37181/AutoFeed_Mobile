@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,13 +39,15 @@ fun ReportScreen(
     userId: Int,
     userFullName: String,
     userAvatarUrl: String? = null,
+    hasNewNotifications: Boolean = false,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onBackToProfile: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
-    onNavigateToChickenManagement: () -> Unit = {}
+    onNavigateToChickenManagement: () -> Unit = {},
+    onNavigateToBarnManagement: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
@@ -55,7 +58,7 @@ fun ReportScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     var selectedFilter by remember { mutableStateOf("All") }
-    val filters = listOf("All", "Pending", "Reviewed", "Rejected")
+    val filters = listOf("All", "Pending", "Reviewed")
 
     var dateFilter by remember { mutableStateOf("All Time") }
     val dateFilters = listOf("All Time", "Last 7 Days", "This Month", "This Year")
@@ -151,19 +154,8 @@ fun ReportScreen(
                     }
                 },
                 actions = {
-                    Box {
-                        IconButton(onClick = onNavigateToNotifications) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
-                        }
-                        if (inventoryList.any { it.quantity < 3 }) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(Color.Red, CircleShape)
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = (-8).dp, y = 8.dp)
-                            )
-                        }
+                    IconButton(onClick = onNavigateToNotifications) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
                     Box(
                         modifier = Modifier
@@ -243,12 +235,6 @@ fun ReportScreen(
                     label = { Text("Inventory") },
                     selected = false,
                     onClick = onNavigateToInventory
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Chicken") },
-                    label = { Text("Chicken") },
-                    selected = false,
-                    onClick = onNavigateToChickenManagement
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Schedule") },

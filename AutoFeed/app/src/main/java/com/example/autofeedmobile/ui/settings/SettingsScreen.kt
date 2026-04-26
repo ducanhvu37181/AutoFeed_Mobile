@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -61,7 +62,66 @@ fun SettingsScreen(
                     onClick = onNavigateToChangePassword
                 )
             }
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                SettingsSectionTitle("About")
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color.White
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text("AutoFeed Mobile", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                                Text("Version 1.0.0", fontSize = 13.sp, color = Color.Gray)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(color = Color(0xFFEEEEEE))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Description", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00897B))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "AutoFeed is an automated chicken farm management system that helps farmers monitor barns, manage feeding schedules, track inventory, and submit reports/requests efficiently.",
+                            fontSize = 13.sp,
+                            color = Color.Gray,
+                            lineHeight = 18.sp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(color = Color(0xFFEEEEEE))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        InfoRowSetting(label = "Developer", value = "AutoFeed Team")
+                        InfoRowSetting(label = "Platform", value = "Android (Jetpack Compose)")
+                        InfoRowSetting(label = "Min SDK", value = "Android 8.0 (API 26)")
+                    }
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
+    }
+}
+
+@Composable
+private fun InfoRowSetting(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 13.sp, color = Color.Gray)
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
 

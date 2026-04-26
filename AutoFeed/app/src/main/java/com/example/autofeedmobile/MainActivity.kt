@@ -18,6 +18,7 @@ import com.example.autofeedmobile.data.SessionManager
 import com.example.autofeedmobile.ui.auth.ChangePasswordScreen
 import com.example.autofeedmobile.ui.auth.ForgotPasswordScreen
 import com.example.autofeedmobile.ui.auth.LoginScreen
+import com.example.autofeedmobile.ui.barn.BarnManagementScreen
 import com.example.autofeedmobile.ui.chicken.ChickenManagementScreen
 import com.example.autofeedmobile.ui.dashboard.DashboardScreen
 import com.example.autofeedmobile.ui.inventory.InventoryScreen
@@ -32,7 +33,7 @@ import com.example.autofeedmobile.ui.settings.SettingsScreen
 import com.example.autofeedmobile.ui.theme.AutoFeedMobileTheme
 
 enum class Screen {
-    Login, Dashboard, Inventory, Schedule, Requests, Reports, Profile, Notifications, Settings, ChangePassword, ForgotPassword, ChickenManagement
+    Login, Dashboard, Inventory, Schedule, Requests, Reports, Profile, Notifications, Settings, ChangePassword, ForgotPassword, ChickenManagement, BarnManagement
 }
 
 class MainActivity : ComponentActivity() {
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
                 var userId by remember { mutableIntStateOf(-1) }
                 var userFullName by remember { mutableStateOf("") }
                 var userAvatarUrl by remember { mutableStateOf<String?>(null) }
+                var hasNewNotifications by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
                     val token = sessionManager.fetchAuthToken()
@@ -91,8 +93,38 @@ class MainActivity : ComponentActivity() {
                             .build()
                         WorkManager.getInstance(context).enqueue(immediateWork)
 
-                        // Periodic check while app is in foreground (every 1 minute for "always" feel)
+                        // Periodic check while app is in foreground
                         while (true) {
+                            // Check for new notifications
+                            try {
+                                val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                val today = fmt.format(java.util.Date())
+                                var found = false
+
+                                val schedResp = RetrofitClient.instance.getSchedulesByDate(userId, today)
+                                if (schedResp.isSuccessful) found = schedResp.body()?.data?.any {
+                                    !it.status.equals("Completed", ignoreCase = true) && !it.status.equals("Disabled", ignoreCase = true)
+                                } == true
+
+                                if (!found) {
+                                    val repResp = RetrofitClient.instance.getReports(userId)
+                                    if (repResp.isSuccessful) found = repResp.body()?.data?.any {
+                                        val s = it.status.lowercase()
+                                        s == "reviewed" || s == "approved" || s == "completed" || s == "rejected"
+                                    } == true
+                                }
+
+                                if (!found) {
+                                    val reqResp = RetrofitClient.instance.getRequests(userId)
+                                    if (reqResp.isSuccessful) found = reqResp.body()?.data?.any {
+                                        val s = it.status.lowercase()
+                                        s == "approved" || s == "rejected"
+                                    } == true
+                                }
+
+                                hasNewNotifications = found
+                            } catch (_: Exception) {}
+
                             kotlinx.coroutines.delay(60000)
                             val periodicWork = OneTimeWorkRequestBuilder<NotificationWorker>()
                                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -125,6 +157,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -136,7 +169,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToNotifications = { currentScreen = Screen.Notifications },
                             onNavigateToRequests = { currentScreen = Screen.Requests },
                             onNavigateToReports = { currentScreen = Screen.Reports },
-                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
+                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement }
                         )
                     }
                     Screen.Inventory -> {
@@ -144,6 +178,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -153,7 +188,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToProfile = { currentScreen = Screen.Profile },
                             onNavigateToNotifications = { currentScreen = Screen.Notifications },
-                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
+                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement }
                         )
                     }
                     Screen.Schedule -> {
@@ -161,6 +197,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -170,7 +207,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToInventory = { currentScreen = Screen.Inventory },
                             onNavigateToProfile = { currentScreen = Screen.Profile },
                             onNavigateToNotifications = { currentScreen = Screen.Notifications },
-                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
+                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement }
                         )
                     }
                     Screen.Requests -> {
@@ -178,6 +216,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -188,7 +227,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onBackToProfile = { currentScreen = Screen.Profile },
                             onNavigateToNotifications = { currentScreen = Screen.Notifications },
-                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
+                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement }
                         )
                     }
                     Screen.Reports -> {
@@ -196,6 +236,7 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -206,13 +247,15 @@ class MainActivity : ComponentActivity() {
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onBackToProfile = { currentScreen = Screen.Profile },
                             onNavigateToNotifications = { currentScreen = Screen.Notifications },
-                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
+                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement }
                         )
                     }
                     Screen.Profile -> {
                         ProfileScreen(
                             userId = userId,
                             userFullName = userFullName,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = { 
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
@@ -226,6 +269,7 @@ class MainActivity : ComponentActivity() {
                             onNavigateToNotifications = { currentScreen = Screen.Notifications },
                             onNavigateToSettings = { currentScreen = Screen.Settings },
                             onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
+                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement },
                             onProfileUpdated = { updatedUser ->
                                 sessionManager.saveUser(updatedUser)
                                 userFullName = updatedUser.fullName
@@ -263,6 +307,27 @@ class MainActivity : ComponentActivity() {
                             userId = userId,
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
+                            onLogout = {
+                                sessionManager.clearSession()
+                                RetrofitClient.setAuthToken(null)
+                                currentScreen = Screen.Login
+                            },
+                            onNavigateToDashboard = { currentScreen = Screen.Dashboard },
+                            onNavigateToInventory = { currentScreen = Screen.Inventory },
+                            onNavigateToSchedule = { currentScreen = Screen.Schedule },
+                            onNavigateToProfile = { currentScreen = Screen.Profile },
+                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
+                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement }
+                        )
+                    }
+                    Screen.BarnManagement -> {
+                        BarnManagementScreen(
+                            userId = userId,
+                            userFullName = userFullName,
+                            userAvatarUrl = userAvatarUrl,
+                            hasNewNotifications = hasNewNotifications,
                             onLogout = {
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)

@@ -24,7 +24,7 @@ object RetrofitClient {
      * For Physical Device (Wi-Fi): Use your machine's IP, e.g., "http://192.168.1.235:5123/"
      */
 //    const val BASE_URL = "https://10.0.2.2:7132/"
-    const val BASE_URL = "http://192.168.1.194:5207/"
+    const val BASE_URL = "http://192.168.1.64:5207/"
 //    const val BASE_URL = "http://10.0.2.2:5207/"
 
     fun getFullUrl(url: String?): String? {

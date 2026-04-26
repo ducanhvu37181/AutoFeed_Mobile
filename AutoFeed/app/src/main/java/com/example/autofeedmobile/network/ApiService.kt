@@ -108,6 +108,12 @@ interface ApiService {
         @Body flock: UpdateFlockDto
     ): Response<Unit>
 
+    @PUT("api/Flock/transfer-quantity-to-flock")
+    suspend fun transferFlock(@Body dto: TransferFlockDto): Response<Unit>
+
+    @PUT("api/Flock/transfer-quantity-back-to-flock")
+    suspend fun transferBackToFlock(@Body dto: TransferFlockDto): Response<Unit>
+
     @GET("api/LargeChicken")
     suspend fun getLargeChickens(): Response<LargeChickenListResponse>
 
@@ -126,4 +132,10 @@ interface ApiService {
         @Path("id") id: Int,
         @Part file: MultipartBody.Part
     ): Response<Unit>
+
+    @GET("api/Barn")
+    suspend fun getBarns(): Response<List<BarnData>>
+
+    @GET("api/Barn/{id}")
+    suspend fun getBarnDetail(@Path("id") id: Int): Response<BarnData>
 }
