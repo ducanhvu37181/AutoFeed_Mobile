@@ -33,7 +33,7 @@ import com.example.autofeedmobile.ui.settings.SettingsScreen
 import com.example.autofeedmobile.ui.theme.AutoFeedMobileTheme
 
 enum class Screen {
-    Login, Dashboard, Inventory, Schedule, Requests, Reports, Profile, Notifications, Settings, ChangePassword, ForgotPassword, ChickenManagement, BarnManagement
+    Login, Dashboard, Inventory, Schedule, Requests, Reports, Profile, Notifications, Settings, ChangePassword, ForgotPassword, ChickenManagement, BarnManagement, BarnImage, FeedingRule
 }
 
 class MainActivity : ComponentActivity() {
@@ -67,10 +67,24 @@ class MainActivity : ComponentActivity() {
 
                 val sessionManager = remember { SessionManager(this@MainActivity) }
                 var currentScreen by remember { mutableStateOf(Screen.Login) }
+                var initialId by remember { mutableIntStateOf(-1) }
+
+                LaunchedEffect(intent) {
+                    intent.getStringExtra("TARGET_SCREEN")?.let { target ->
+                        initialId = intent.getIntExtra("TARGET_ID", -1)
+                        when (target) {
+                            "Schedule" -> currentScreen = Screen.Schedule
+                            "Requests" -> currentScreen = Screen.Requests
+                            "Reports" -> currentScreen = Screen.Reports
+                            "Notifications" -> currentScreen = Screen.Notifications
+                        }
+                    }
+                }
                 var userId by remember { mutableIntStateOf(-1) }
                 var userFullName by remember { mutableStateOf("") }
                 var userAvatarUrl by remember { mutableStateOf<String?>(null) }
                 var hasNewNotifications by remember { mutableStateOf(false) }
+                var selectedBarnIdForImages by remember { mutableIntStateOf(-1) }
 
                 LaunchedEffect(Unit) {
                     val token = sessionManager.fetchAuthToken()
@@ -170,7 +184,15 @@ class MainActivity : ComponentActivity() {
                             onNavigateToRequests = { currentScreen = Screen.Requests },
                             onNavigateToReports = { currentScreen = Screen.Reports },
                             onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
-                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement }
+                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement },
+                            onNavigateToBarnImage = { barnId ->
+                                selectedBarnIdForImages = barnId
+                                currentScreen = Screen.BarnImage
+                            },
+                            onNavigateToFeedingRule = { barnId ->
+                                selectedBarnIdForImages = barnId
+                                currentScreen = Screen.FeedingRule
+                            }
                         )
                     }
                     Screen.Inventory -> {
@@ -198,17 +220,36 @@ class MainActivity : ComponentActivity() {
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
                             hasNewNotifications = hasNewNotifications,
-                            onLogout = { 
+                            initialId = initialId,
+                            onLogout = {
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
                                 currentScreen = Screen.Login 
                             },
-                            onNavigateToDashboard = { currentScreen = Screen.Dashboard },
-                            onNavigateToInventory = { currentScreen = Screen.Inventory },
-                            onNavigateToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
-                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
-                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement }
+                            onNavigateToDashboard = { 
+                                initialId = -1
+                                currentScreen = Screen.Dashboard 
+                            },
+                            onNavigateToInventory = { 
+                                initialId = -1
+                                currentScreen = Screen.Inventory 
+                            },
+                            onNavigateToProfile = { 
+                                initialId = -1
+                                currentScreen = Screen.Profile 
+                            },
+                            onNavigateToNotifications = { 
+                                initialId = -1
+                                currentScreen = Screen.Notifications 
+                            },
+                            onNavigateToChickenManagement = { 
+                                initialId = -1
+                                currentScreen = Screen.ChickenManagement 
+                            },
+                            onNavigateToBarnManagement = { 
+                                initialId = -1
+                                currentScreen = Screen.BarnManagement 
+                            }
                         )
                     }
                     Screen.Requests -> {
@@ -217,18 +258,40 @@ class MainActivity : ComponentActivity() {
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
                             hasNewNotifications = hasNewNotifications,
-                            onLogout = { 
+                            initialId = initialId,
+                            onLogout = {
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
                                 currentScreen = Screen.Login 
                             },
-                            onNavigateToDashboard = { currentScreen = Screen.Dashboard },
-                            onNavigateToInventory = { currentScreen = Screen.Inventory },
-                            onNavigateToSchedule = { currentScreen = Screen.Schedule },
-                            onBackToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
-                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
-                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement }
+                            onNavigateToDashboard = { 
+                                initialId = -1
+                                currentScreen = Screen.Dashboard 
+                            },
+                            onNavigateToInventory = { 
+                                initialId = -1
+                                currentScreen = Screen.Inventory 
+                            },
+                            onNavigateToSchedule = { 
+                                initialId = -1
+                                currentScreen = Screen.Schedule 
+                            },
+                            onBackToProfile = { 
+                                initialId = -1
+                                currentScreen = Screen.Profile 
+                            },
+                            onNavigateToNotifications = { 
+                                initialId = -1
+                                currentScreen = Screen.Notifications 
+                            },
+                            onNavigateToChickenManagement = { 
+                                initialId = -1
+                                currentScreen = Screen.ChickenManagement 
+                            },
+                            onNavigateToBarnManagement = { 
+                                initialId = -1
+                                currentScreen = Screen.BarnManagement 
+                            }
                         )
                     }
                     Screen.Reports -> {
@@ -237,18 +300,40 @@ class MainActivity : ComponentActivity() {
                             userFullName = userFullName,
                             userAvatarUrl = userAvatarUrl,
                             hasNewNotifications = hasNewNotifications,
-                            onLogout = { 
+                            initialId = initialId,
+                            onLogout = {
                                 sessionManager.clearSession()
                                 RetrofitClient.setAuthToken(null)
                                 currentScreen = Screen.Login 
                             },
-                            onNavigateToDashboard = { currentScreen = Screen.Dashboard },
-                            onNavigateToInventory = { currentScreen = Screen.Inventory },
-                            onNavigateToSchedule = { currentScreen = Screen.Schedule },
-                            onBackToProfile = { currentScreen = Screen.Profile },
-                            onNavigateToNotifications = { currentScreen = Screen.Notifications },
-                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
-                            onNavigateToBarnManagement = { currentScreen = Screen.BarnManagement }
+                            onNavigateToDashboard = { 
+                                initialId = -1
+                                currentScreen = Screen.Dashboard 
+                            },
+                            onNavigateToInventory = { 
+                                initialId = -1
+                                currentScreen = Screen.Inventory 
+                            },
+                            onNavigateToSchedule = { 
+                                initialId = -1
+                                currentScreen = Screen.Schedule 
+                            },
+                            onBackToProfile = { 
+                                initialId = -1
+                                currentScreen = Screen.Profile 
+                            },
+                            onNavigateToNotifications = { 
+                                initialId = -1
+                                currentScreen = Screen.Notifications 
+                            },
+                            onNavigateToChickenManagement = { 
+                                initialId = -1
+                                currentScreen = Screen.ChickenManagement 
+                            },
+                            onNavigateToBarnManagement = { 
+                                initialId = -1
+                                currentScreen = Screen.BarnManagement 
+                            }
                         )
                     }
                     Screen.Profile -> {
@@ -299,7 +384,19 @@ class MainActivity : ComponentActivity() {
                                 RetrofitClient.setAuthToken(null)
                                 currentScreen = Screen.Login 
                             },
-                            onBack = { currentScreen = Screen.Dashboard }
+                            onBack = { currentScreen = Screen.Dashboard },
+                            onNavigateToSchedule = { id ->
+                                initialId = id
+                                currentScreen = Screen.Schedule
+                            },
+                            onNavigateToRequest = { id ->
+                                initialId = id
+                                currentScreen = Screen.Requests
+                            },
+                            onNavigateToReport = { id ->
+                                initialId = id
+                                currentScreen = Screen.Reports
+                            }
                         )
                     }
                     Screen.ChickenManagement -> {
@@ -338,7 +435,27 @@ class MainActivity : ComponentActivity() {
                             onNavigateToSchedule = { currentScreen = Screen.Schedule },
                             onNavigateToProfile = { currentScreen = Screen.Profile },
                             onNavigateToNotifications = { currentScreen = Screen.Notifications },
-                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement }
+                            onNavigateToChickenManagement = { currentScreen = Screen.ChickenManagement },
+                            onNavigateToBarnImage = { barnId ->
+                                selectedBarnIdForImages = barnId
+                                currentScreen = Screen.BarnImage
+                            },
+                            onNavigateToFeedingRule = { barnId ->
+                                selectedBarnIdForImages = barnId
+                                currentScreen = Screen.FeedingRule
+                            }
+                        )
+                    }
+                    Screen.BarnImage -> {
+                        com.example.autofeedmobile.ui.barn.BarnImageScreen(
+                            barnId = selectedBarnIdForImages,
+                            onBack = { currentScreen = Screen.BarnManagement }
+                        )
+                    }
+                    Screen.FeedingRule -> {
+                        com.example.autofeedmobile.ui.barn.FeedingRuleScreen(
+                            barnId = selectedBarnIdForImages,
+                            onBack = { currentScreen = Screen.BarnManagement }
                         )
                     }
                 }

@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 data class AppNotification(
+    val id: Int,
     val title: String,
     val message: String,
     val color: Color,
@@ -45,7 +46,10 @@ fun NotificationScreen(
     userFullName: String,
     userAvatarUrl: String? = null,
     onLogout: () -> Unit = {},
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToSchedule: (Int) -> Unit = {},
+    onNavigateToRequest: (Int) -> Unit = {},
+    onNavigateToReport: (Int) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var notifications by remember { mutableStateOf<List<AppNotification>>(emptyList()) }
@@ -78,7 +82,7 @@ fun NotificationScreen(
                         if (!schedule.status.equals("Completed", ignoreCase = true)) {
                             val title = "Upcoming Schedule"
                             val msg = "Task: ${schedule.taskTitle} is pending"
-                            newNotifications.add(AppNotification(title, msg, Color(0xFFE8F5E9), Color(0xFF4CAF50), "Schedule"))
+                            newNotifications.add(AppNotification(schedule.schedId, title, msg, Color(0xFFE8F5E9), Color(0xFF4CAF50), "Schedule"))
                         }
                     }
                 }
@@ -92,7 +96,7 @@ fun NotificationScreen(
                             val title = if (isRejected) "Report Rejected" else "Report Reviewed"
                             val displayStatus = if (status == "rejected") "rejected" else "Reviewed"
                             val msg = "Your report '${report.type}' is $displayStatus"
-                            newNotifications.add(AppNotification(title, msg, if (isRejected) Color(0xFFFFEBEE) else Color(0xFFE8F5E9), if (isRejected) Color.Red else Color(0xFF4CAF50), "Report"))
+                            newNotifications.add(AppNotification(report.reportId, title, msg, if (isRejected) Color(0xFFFFEBEE) else Color(0xFFE8F5E9), if (isRejected) Color.Red else Color(0xFF4CAF50), "Report"))
 
                             val key = "rep_${report.reportId}_$status"
                             if (NotificationHelper.shouldNotify(context, key)) {
@@ -112,7 +116,7 @@ fun NotificationScreen(
                             val title = if (isRejected) "Request Rejected" else "Request Approved"
                             val displayStatus = if (status == "rejected") "rejected" else "approved"
                             val msg = "Your request for '${request.type}' is $displayStatus"
-                            newNotifications.add(AppNotification(title, msg, if (isRejected) Color(0xFFFFEBEE) else Color(0xFFE8F5E9), if (isRejected) Color.Red else Color(0xFF4CAF50), "Request"))
+                            newNotifications.add(AppNotification(request.requestId, title, msg, if (isRejected) Color(0xFFFFEBEE) else Color(0xFFE8F5E9), if (isRejected) Color.Red else Color(0xFF4CAF50), "Request"))
 
                             val key = "req_${request.requestId}_$status"
                             if (NotificationHelper.shouldNotify(context, key)) {
@@ -229,7 +233,14 @@ fun NotificationScreen(
                             title = noti.title,
                             message = noti.message,
                             color = noti.color,
-                            indicatorColor = noti.indicatorColor
+                            indicatorColor = noti.indicatorColor,
+                            onClick = {
+                                when (noti.type) {
+                                    "Schedule" -> onNavigateToSchedule(noti.id)
+                                    "Request" -> onNavigateToRequest(noti.id)
+                                    "Report" -> onNavigateToReport(noti.id)
+                                }
+                            }
                         )
                     }
                 }

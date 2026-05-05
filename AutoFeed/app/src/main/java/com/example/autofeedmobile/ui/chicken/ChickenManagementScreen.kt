@@ -50,13 +50,13 @@ fun ChickenManagementScreen(
     onNavigateToBarnManagement: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Chicken", "Large Chicken")
+    val tabs = listOf("Flock", "Large Chicken")
     var showMenu by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     var statusFilter by remember { mutableStateOf("Active") }
-    val flockFilterOptions = listOf("All", "Active", "Transferred")
-    val chickenFilterOptions = listOf("All", "Active", "Exported")
+    val flockFilterOptions = listOf("All", "Active", "Sick", "Transferred")
+    val chickenFilterOptions = listOf("All", "Active", "Sick", "Exported")
 
     var flocks by remember { mutableStateOf<List<FlockData>>(emptyList()) }
     var largeChickens by remember { mutableStateOf<List<LargeChickenData>>(emptyList()) }
@@ -239,12 +239,14 @@ fun ChickenManagementScreen(
             } else {
                 val filteredFlocks = when (statusFilter) {
                     "Active" -> flocks.filter { it.isActive }
+                    "Sick" -> flocks.filter { it.healthStatus.contains("Sick", ignoreCase = true) && it.isActive }
                     "Transferred" -> flocks.filter { !it.isActive }
                     else -> flocks
                 }
                 
                 val filteredChickens = when (statusFilter) {
                     "Active" -> largeChickens.filter { it.isActive }
+                    "Sick" -> largeChickens.filter { it.healthStatus.contains("Sick", ignoreCase = true) && it.isActive }
                     "Exported" -> largeChickens.filter { !it.isActive }
                     else -> largeChickens
                 }
@@ -324,35 +326,52 @@ fun FlockItem(flock: FlockData, onClick: () -> Unit) {
                     StatusBadge(flock.healthStatus)
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                InfoColumn(
-                    label = "Weight",
-                    value = "${flock.weight} kg",
-                    modifier = Modifier.weight(1f)
+                Icon(
+                    imageVector = Icons.Default.MonitorWeight,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = Color.Gray
                 )
-                if (flock.isActive) {
-                    InfoColumn(
-                        label = "Quantity",
-                        value = "${flock.quantity}",
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                Spacer(modifier = Modifier.width(4.dp))
+                val quantityPart = if (flock.isActive) "${flock.quantity} Birds | " else ""
+                Text(
+                    text = "$quantityPart${flock.weight} kg",
+                    fontSize = 14.sp,
+                    color = Color.DarkGray,
+                    fontWeight = FontWeight.Medium
+                )
+                
                 if (flock.isActive && flock.barnId != null) {
-                    InfoColumn(
-                        label = "Barn ID",
-                        value = "#${flock.barnId}",
-                        modifier = Modifier.weight(1f)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color(0xFF00897B)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Barn #${flock.barnId}",
+                        fontSize = 14.sp,
+                        color = Color(0xFF00897B),
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
             if (!flock.note.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Note: ${flock.note}", fontSize = 12.sp, color = Color.Gray)
+                Text(
+                    text = "Note: ${flock.note}",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
@@ -370,7 +389,7 @@ fun LargeChickenItem(chicken: LargeChickenData, onClick: () -> Unit) {
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.Top // Align to top to give more space for badges
+            verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
                 model = RetrofitClient.getFullUrl(chicken.imageUrl),
@@ -382,38 +401,57 @@ fun LargeChickenItem(chicken: LargeChickenData, onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                // Title and Badges Column
-                Text(
-                    text = chicken.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                
-                Spacer(modifier = Modifier.height(6.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    StatusBadge(if (chicken.isActive) "Active" else "Exported")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    StatusBadge(chicken.healthStatus)
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
+                // Title and Health Badge Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Weight: ${chicken.weight} kg", fontSize = 14.sp, color = Color.Gray)
+                    Text(
+                        text = chicken.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatusBadge(chicken.healthStatus)
+                }
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                StatusBadge(if (chicken.isActive) "Active" else "Exported")
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MonitorWeight,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${chicken.weight} kg",
+                        fontSize = 14.sp,
+                        color = Color.DarkGray,
+                        fontWeight = FontWeight.Medium
+                    )
+                    
                     if (chicken.isActive && chicken.barnId != null) {
+                        Spacer(modifier = Modifier.weight(1f))
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color(0xFF00897B)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            "Barn ID: #${chicken.barnId}",
+                            text = "Barn #${chicken.barnId}",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFF00897B)

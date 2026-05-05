@@ -62,7 +62,7 @@ object NotificationHelper {
         }
     }
 
-    fun showNotification(context: Context, title: String, message: String, notificationId: Int) {
+    fun showNotification(context: Context, title: String, message: String, notificationId: Int, targetScreen: String? = null) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (androidx.core.content.ContextCompat.checkSelfPermission(
                     context,
@@ -75,10 +75,13 @@ object NotificationHelper {
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            if (targetScreen != null) {
+                putExtra("TARGET_SCREEN", targetScreen)
+            }
         }
         val pendingIntent: PendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE
+            context, notificationId, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)

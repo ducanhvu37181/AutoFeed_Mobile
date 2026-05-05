@@ -138,4 +138,13 @@ interface ApiService {
 
     @GET("api/Barn/{id}")
     suspend fun getBarnDetail(@Path("id") id: Int): Response<BarnData>
+
+    @GET("api/BarnImage/barn/{barnId}/date")
+    suspend fun getBarnImagesByDate(
+        @Path("barnId") barnId: Int,
+        @Query("captureDate") captureDate: String
+    ): Response<BarnImageListResponse>
+
+    @GET("api/FeedingRule/barn/{barnId}")
+    suspend fun getFeedingRulesByBarn(@Path("barnId") barnId: Int): Response<List<FeedingRuleData>>
 }

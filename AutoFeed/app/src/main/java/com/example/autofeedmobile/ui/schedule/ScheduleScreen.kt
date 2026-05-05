@@ -48,6 +48,7 @@ fun ScheduleScreen(
     userFullName: String,
     userAvatarUrl: String? = null,
     hasNewNotifications: Boolean = false,
+    initialId: Int = -1,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
@@ -141,6 +142,33 @@ fun ScheduleScreen(
     // Fetch schedules when user or date changes
     LaunchedEffect(userId, selectedDate) {
         fetchSchedules()
+    }
+
+    LaunchedEffect(initialId) {
+        if (initialId != -1) {
+            selectedTaskId = initialId
+            isDetailLoading = true
+            showBottomSheet = true
+            try {
+                val response = RetrofitClient.instance.getScheduleDetail(initialId)
+                if (response.isSuccessful && response.body()?.data != null) {
+                    val detail = response.body()!!.data!!
+                    selectedTaskDetail = ScheduleTask(
+                        title = detail.taskTitle,
+                        status = detail.status.replaceFirstChar { it.uppercase() },
+                        priority = detail.priority.replaceFirstChar { it.uppercase() },
+                        time = "${formatTimeOnly(detail.startTime)} - ${formatTimeOnly(detail.endTime)}",
+                        location = "Barn ${detail.barnId}",
+                        details = detail.description,
+                        note = detail.note
+                    )
+                }
+            } catch (e: Exception) {
+                // handle error
+            } finally {
+                isDetailLoading = false
+            }
+        }
     }
 
     val filteredSchedules = schedules

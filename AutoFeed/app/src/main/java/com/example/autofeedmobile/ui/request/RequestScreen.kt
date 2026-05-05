@@ -41,6 +41,7 @@ fun RequestScreen(
     userFullName: String,
     userAvatarUrl: String? = null,
     hasNewNotifications: Boolean = false,
+    initialId: Int = -1,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
@@ -103,6 +104,21 @@ fun RequestScreen(
 
     LaunchedEffect(userId) {
         fetchRequests()
+    }
+
+    LaunchedEffect(initialId) {
+        if (initialId != -1) {
+            selectedRequestDetail = RequestData(
+                requestId = initialId,
+                userId = userId,
+                type = "",
+                description = "",
+                status = "",
+                createdAt = null,
+                fileUrl = null
+            )
+            showDetailBottomSheet = true
+        }
     }
 
     val filteredRequests = requests.filter { request ->

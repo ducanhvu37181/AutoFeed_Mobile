@@ -2,25 +2,35 @@ package com.example.autofeedmobile.ui.barn
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.BarnData
+import com.example.autofeedmobile.network.BarnImageData
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.util.formatDate
 import kotlinx.coroutines.delay
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @Composable
-fun BarnDetailView(barnId: Int) {
+fun BarnDetailView(barnId: Int, onViewImages: () -> Unit, onViewFeedingRules: () -> Unit) {
     var barn by remember { mutableStateOf<BarnData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -50,6 +60,7 @@ fun BarnDetailView(barnId: Int) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
             Text(
@@ -63,6 +74,35 @@ fun BarnDetailView(barnId: Int) {
                 fontSize = 14.sp,
                 color = Color.Gray
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // View Images Button
+            Button(
+                onClick = onViewImages,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.Image, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("View Today's Images")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // View Feeding Rules Button
+            OutlinedButton(
+                onClick = onViewFeedingRules,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF00897B)),
+                shape = RoundedCornerShape(8.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF00897B))
+            ) {
+                Icon(Icons.Default.Restaurant, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("View Feeding Rules")
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 

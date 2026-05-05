@@ -235,17 +235,27 @@ fun EditLargeChickenView(
                             if (updateResponse.isSuccessful && avatarSuccess) {
                                 // Automatically send report
                                 try {
-                                    val description = "Update chicken detail for ${chicken.name} (ID: ${chicken.chickenLid}). New status: $healthStatus, Weight: $weight kg, Note: $note"
-                                    val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-                                    val typePart = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
-                                    val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
-                                    
-                                    RetrofitClient.instance.createReport(
-                                        userId = userIdPart,
-                                        type = typePart,
-                                        description = descriptionPart,
-                                        file = null
-                                    )
+                                    val changes = mutableListOf<String>()
+                                    if (name.trim() != chicken.name) changes.add("Name: '${chicken.name}' -> '${name.trim()}'")
+                                    if (healthStatus != chicken.healthStatus) changes.add("Health Status: '${chicken.healthStatus}' -> '$healthStatus'")
+                                    val newWeight = weight.toDoubleOrNull() ?: chicken.weight
+                                    if (newWeight != chicken.weight) changes.add("Weight: ${chicken.weight}kg -> ${newWeight}kg")
+                                    if (note.trim() != (chicken.note?.trim() ?: "")) changes.add("Notes updated")
+                                    if (selectedImageUri != null) changes.add("Avatar updated")
+
+                                    if (changes.isNotEmpty()) {
+                                        val description = "User updated chicken details for '${chicken.name}' (ID: ${chicken.chickenLid}). Changes: ${changes.joinToString("; ")}"
+                                        val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val typePart = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
+                                        
+                                        RetrofitClient.instance.createReport(
+                                            userId = userIdPart,
+                                            type = typePart,
+                                            description = descriptionPart,
+                                            file = null
+                                        )
+                                    }
                                 } catch (e: Exception) {
                                     e.printStackTrace()
                                 }

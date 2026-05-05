@@ -32,6 +32,7 @@ fun EditFlockView(
 ) {
     var name by remember { mutableStateOf(flock.name) }
     var healthStatus by remember { mutableStateOf(flock.healthStatus) }
+    var weight by remember { mutableStateOf(flock.weight.toString()) }
     var note by remember { mutableStateOf(flock.note ?: "") }
     var isSubmitting by remember { mutableStateOf(false) }
 
@@ -71,10 +72,18 @@ fun EditFlockView(
         // Name
         OutlinedTextField(
             value = name,
-            onValueChange = { name = it },
+            onValueChange = { },
+            readOnly = true,
             label = { Text("Name") },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.LightGray,
+                unfocusedBorderColor = Color.LightGray,
+                disabledBorderColor = Color.LightGray,
+                focusedLabelColor = Color.Gray,
+                unfocusedLabelColor = Color.Gray
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -112,6 +121,20 @@ fun EditFlockView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Weight
+        OutlinedTextField(
+            value = weight,
+            onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) weight = it },
+            label = { Text("Weight (kg)") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Note
         OutlinedTextField(
             value = note,
@@ -145,6 +168,7 @@ fun EditFlockView(
                                 flockId = flock.flockId,
                                 name = name,
                                 healthStatus = healthStatus,
+                                weight = weight.toDoubleOrNull() ?: flock.weight,
                                 note = note
                             )
                             val updateResponse = RetrofitClient.instance.updateFlock(flock.flockId, updateDto)
@@ -152,17 +176,28 @@ fun EditFlockView(
                             if (updateResponse.isSuccessful) {
                                 // Automatically send report
                                 try {
-                                    val description = "Update flock detail for ${flock.name} (ID: ${flock.flockId}). New status: $healthStatus, Name: $name, Note: $note"
-                                    val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-                                    val typePart = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
-                                    val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
-                                    
-                                    RetrofitClient.instance.createReport(
-                                        userId = userIdPart,
-                                        type = typePart,
-                                        description = descriptionPart,
-                                        file = null
-                                    )
+                                    val changes = mutableListOf<String>()
+                                    if (name.trim() != flock.name) changes.add("Name: '${flock.name}' -> '${name.trim()}'")
+                                    if (healthStatus != flock.healthStatus) changes.add("Health Status: '${flock.healthStatus}' -> '$healthStatus'")
+                                    val newWeight = weight.toDoubleOrNull() ?: flock.weight
+                                    if (newWeight != flock.weight) changes.add("Weight: ${flock.weight}kg -> ${newWeight}kg")
+                                    if (note.trim() != (flock.note?.trim() ?: "")) {
+                                        changes.add("Notes updated")
+                                    }
+
+                                    if (changes.isNotEmpty()) {
+                                        val description = "User updated flock details for '${flock.name}' (ID: ${flock.flockId}). Changes: ${changes.joinToString("; ")}"
+                                        val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val typePart = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
+                                        
+                                        RetrofitClient.instance.createReport(
+                                            userId = userIdPart,
+                                            type = typePart,
+                                            description = descriptionPart,
+                                            file = null
+                                        )
+                                    }
                                 } catch (e: Exception) {
                                     e.printStackTrace()
                                 }

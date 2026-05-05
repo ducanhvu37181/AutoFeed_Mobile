@@ -41,7 +41,9 @@ fun BarnManagementScreen(
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
-    onNavigateToChickenManagement: () -> Unit = {}
+    onNavigateToChickenManagement: () -> Unit = {},
+    onNavigateToBarnImage: (Int) -> Unit = {},
+    onNavigateToFeedingRule: (Int) -> Unit = {}
 ) {
     var barns by remember { mutableStateOf<List<BarnData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -186,7 +188,19 @@ fun BarnManagementScreen(
                 containerColor = Color.White,
                 dragHandle = { BottomSheetDefaults.DragHandle() }
             ) {
-                BarnDetailView(barnId = selectedBarnId!!)
+                BarnDetailView(
+                    barnId = selectedBarnId!!,
+                    onViewImages = {
+                        val id = selectedBarnId!!
+                        selectedBarnId = null
+                        onNavigateToBarnImage(id)
+                    },
+                    onViewFeedingRules = {
+                        val id = selectedBarnId!!
+                        selectedBarnId = null
+                        onNavigateToFeedingRule(id)
+                    }
+                )
             }
         }
     }
