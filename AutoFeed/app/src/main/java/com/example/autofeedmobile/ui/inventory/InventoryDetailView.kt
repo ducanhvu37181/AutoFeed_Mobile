@@ -295,17 +295,28 @@ fun InventoryDetailContent(
                                 )
                                 if (response.isSuccessful) {
                                     // Automatically send report
-                                    val description = "Update stock for ${item.foodName ?: "Unknown"}: quantity after update is $quantity Bags"
-                                    val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-                                    val reportTypePart = "Inventory".toRequestBody("text/plain".toMediaTypeOrNull())
-                                    val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
-                                    
-                                    RetrofitClient.instance.createReport(
-                                        userId = userIdPart,
-                                        type = reportTypePart,
-                                        description = descriptionPart,
-                                        file = null
-                                    )
+                                    try {
+                                        val oldQty = item.quantity ?: 0
+                                        val newQty = quantity.toIntOrNull() ?: 0
+                                        if (oldQty != newQty) {
+                                            val delta = newQty - oldQty
+                                            val deltaStr = if (delta > 0) "+$delta" else "$delta"
+                                            val description = "Inventory update for ${item.foodName ?: "Unknown"}: $deltaStr Bags (Total: $newQty Bags)"
+
+                                            val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                                            val reportTypePart = "Inventory".toRequestBody("text/plain".toMediaTypeOrNull())
+                                            val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
+                                            
+                                            RetrofitClient.instance.createReport(
+                                                userId = userIdPart,
+                                                type = reportTypePart,
+                                                description = descriptionPart,
+                                                file = null
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
                                     
                                     onRefresh()
                                     showEditDialog = false

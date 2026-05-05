@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.autofeedmobile.data.SessionManager
 import com.example.autofeedmobile.network.RetrofitClient
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -24,12 +25,40 @@ class NotificationWorker(context: Context, params: WorkerParameters) : Coroutine
         val apiService = RetrofitClient.instance
 
         try {
-            // 2. Schedules
+            // 1 & 2. Schedules (New from today and Upcoming)
             val schedResponse = apiService.getSchedules(userId)
             if (schedResponse.isSuccessful) {
+                val schedules = schedResponse.body()?.data ?: emptyList()
+                val today = LocalDate.now()
                 val now = LocalDateTime.now()
                 val formatter = DateTimeFormatter.ISO_DATE_TIME
-                schedResponse.body()?.data?.forEach { schedule ->
+
+                schedules.forEach { schedule ->
+                    // A. New Schedule Notification (For today or future)
+                    try {
+                        val scheduleDate = schedule.startDate?.let {
+                            if (it.contains("T")) LocalDate.parse(it.substringBefore("T"))
+                            else LocalDate.parse(it)
+                        }
+                        if (scheduleDate != null && !scheduleDate.isBefore(today)) {
+                            val key = "sched_${schedule.schedId}_new"
+                            if (NotificationHelper.shouldNotify(applicationContext, key)) {
+                                val dateDesc = if (scheduleDate.isEqual(today)) "today" else "on $scheduleDate"
+                                NotificationHelper.showNotification(
+                                    applicationContext,
+                                    "New Schedule Assigned",
+                                    "New task '${schedule.taskTitle}' is scheduled $dateDesc",
+                                    schedule.schedId + 4000,
+                                    "Schedule"
+                                )
+                                NotificationHelper.markAsNotified(applicationContext, key)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("NotificationWorker", "Error parsing startDate: ${schedule.startDate}", e)
+                    }
+
+                    // B. Upcoming Schedules (Starting Soon)
                     if (schedule.status.lowercase() == "pending" && schedule.startTime != null) {
                         try {
                             val startTime = LocalDateTime.parse(schedule.startTime, formatter)
@@ -40,7 +69,8 @@ class NotificationWorker(context: Context, params: WorkerParameters) : Coroutine
                                         applicationContext,
                                         "Upcoming Schedule",
                                         "Schedule ${schedule.taskTitle} starts soon",
-                                        schedule.schedId + 1000
+                                        schedule.schedId + 1000,
+                                        "Schedule"
                                     )
                                     NotificationHelper.markAsNotified(applicationContext, key)
                                 }
@@ -65,7 +95,8 @@ class NotificationWorker(context: Context, params: WorkerParameters) : Coroutine
                                 applicationContext,
                                 title,
                                 "Your request for '${request.type}' is now $displayStatus",
-                                request.requestId + 2000
+                                request.requestId + 2000,
+                                "Requests"
                             )
                             NotificationHelper.markAsNotified(applicationContext, key)
                         }
@@ -88,7 +119,8 @@ class NotificationWorker(context: Context, params: WorkerParameters) : Coroutine
                                 applicationContext,
                                 title,
                                 "Your report #${report.reportId} ('${report.type}') is now $displayStatus",
-                                report.reportId + 3000
+                                report.reportId + 3000,
+                                "Reports"
                             )
                             NotificationHelper.markAsNotified(applicationContext, key)
                         }

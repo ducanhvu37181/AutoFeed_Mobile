@@ -218,6 +218,7 @@ data class UpdateFlockDto(
     val flockId: Int,
     val name: String,
     val healthStatus: String,
+    val weight: Double,
     val note: String?
 )
 
@@ -272,4 +273,46 @@ data class LargeChickenDetailResponse(
     val httpCode: Int,
     val data: LargeChickenData,
     val description: String?
+)
+
+data class BarnImageData(
+    val imageBarnId: Int,
+    val barnId: Int,
+    val barnType: String?,
+    @SerializedName("url")
+    val imageUrl: String,
+    val description: String?,
+    val captureDate: String
+)
+
+data class BarnImageListResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: List<BarnImageData>?,
+    val description: String?
+)
+
+data class FoodRuleDetailData(
+    val foodRuleDetailID: Int,
+    val foodId: Int,
+    val foodName: String,
+    val feedHour: Int,
+    val feedMinute: Int,
+    val amount: Int,
+    val description: String?,
+    val status: Boolean
+)
+
+data class FeedingRuleData(
+    val ruleId: Int,
+    val description: String,
+    val times: Int,
+    val startDate: String,
+    val endDate: String,
+    val chickenLid: Int?,
+    val chickenName: String?,
+    val flockId: Int?,
+    val flockName: String?,
+    val status: String,
+    val details: List<FoodRuleDetailData>
 )

@@ -25,11 +25,14 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -67,7 +70,9 @@ fun DashboardScreen(
     onNavigateToRequests: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
     onNavigateToChickenManagement: () -> Unit = {},
-    onNavigateToBarnManagement: () -> Unit = {}
+    onNavigateToBarnManagement: () -> Unit = {},
+    onNavigateToBarnImage: (Int) -> Unit = {},
+    onNavigateToFeedingRule: (Int) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var schedules by remember { mutableStateOf<List<ScheduleData>>(emptyList()) }
@@ -75,6 +80,8 @@ fun DashboardScreen(
     var barns by remember { mutableStateOf<List<com.example.autofeedmobile.network.BarnData>>(emptyList()) }
     var reports by remember { mutableStateOf<List<ReportData>>(emptyList()) }
     var requests by remember { mutableStateOf<List<RequestData>>(emptyList()) }
+    var flocks by remember { mutableStateOf<List<com.example.autofeedmobile.network.FlockData>>(emptyList()) }
+    var largeChickens by remember { mutableStateOf<List<com.example.autofeedmobile.network.LargeChickenData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
@@ -145,6 +152,18 @@ fun DashboardScreen(
                 val barnResponse = RetrofitClient.instance.getBarns()
                 if (barnResponse.isSuccessful) {
                     barns = barnResponse.body() ?: emptyList()
+                }
+
+                // Fetch Flocks for health check
+                val flockResponse = RetrofitClient.instance.getFlocks()
+                if (flockResponse.isSuccessful) {
+                    flocks = flockResponse.body()?.data ?: emptyList()
+                }
+
+                // Fetch Large Chickens for health check
+                val chickenResponse = RetrofitClient.instance.getLargeChickens()
+                if (chickenResponse.isSuccessful) {
+                    largeChickens = chickenResponse.body()?.data ?: emptyList()
                 }
             } catch (e: Exception) {
                 // handle error
@@ -290,6 +309,7 @@ fun DashboardScreen(
                 // Summary Cards Grid
                 item {
                     val criticalStockCount = inventoryList.count { (it.quantity ?: 0) < 3 }
+
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SummaryCard(
@@ -341,8 +361,8 @@ fun DashboardScreen(
                                 icon = Icons.AutoMirrored.Filled.List,
                                 iconContainerColor = Color(0xFF795548).copy(alpha = 0.1f),
                                 iconColor = Color(0xFF795548),
-                                value = "Live",
-                                label = "Chickens"
+                                value = "${flocks.count { it.isActive } + largeChickens.count { it.isActive }}",
+                                label = "Live Chickens"
                             )
                         }
                     }
@@ -571,6 +591,7 @@ fun DashboardScreen(
                         }
                     }
                 }
+
             }
         }
 

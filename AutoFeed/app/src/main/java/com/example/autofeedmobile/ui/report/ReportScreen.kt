@@ -40,6 +40,7 @@ fun ReportScreen(
     userFullName: String,
     userAvatarUrl: String? = null,
     hasNewNotifications: Boolean = false,
+    initialId: Int = -1,
     onLogout: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
@@ -137,6 +138,23 @@ fun ReportScreen(
 
     LaunchedEffect(userId) {
         fetchReports()
+    }
+
+    LaunchedEffect(initialId) {
+        if (initialId != -1) {
+            selectedReportDetail = ReportData(
+                reportId = initialId,
+                userId = userId,
+                userName = userFullName,
+                userRole = "Farmer",
+                type = "",
+                description = "",
+                status = "",
+                createDate = null,
+                fileUrl = null
+            )
+            showDetailBottomSheet = true
+        }
     }
 
     Scaffold(
