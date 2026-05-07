@@ -182,7 +182,7 @@ fun EditFlockView(
                                     val newWeight = weight.toDoubleOrNull() ?: flock.weight
                                     if (newWeight != flock.weight) changes.add("Weight: ${flock.weight}kg -> ${newWeight}kg")
                                     if (note.trim() != (flock.note?.trim() ?: "")) {
-                                        changes.add("Notes updated")
+                                        changes.add("Notes updated: '${note.trim()}'")
                                     }
 
                                     if (changes.isNotEmpty()) {

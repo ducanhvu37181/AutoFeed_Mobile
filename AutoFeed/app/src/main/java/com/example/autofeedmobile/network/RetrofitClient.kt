@@ -19,13 +19,16 @@ object RetrofitClient {
     }
 
     /**
-     * For Emulator: Use "http://10.0.2.2:5123/"
-     * For Physical Device (with 'adb reverse tcp:5123 tcp:5123'): Use "http://localhost:5123/"
-     * For Physical Device (Wi-Fi): Use your machine's IP, e.g., "http://192.168.1.235:5123/"
+     * For Emulator: Use "http://10.0.2.2:5207/"
+     * For Physical Device (USB + 'adb reverse'): Use "http://127.0.0.1:5207/"
+     * For Physical Device (Wi-Fi): Use your machine's IP, e.g., "http://192.168.1.xxx:5207/"
      */
-//    const val BASE_URL = "https://10.0.2.2:7132/"
-    const val BASE_URL = "http://192.168.1.55:5207/"
+//    const val BASE_URL = "http://127.0.0.1:5207/"
 //    const val BASE_URL = "http://10.0.2.2:5207/"
+//    const val BASE_URL = "http://192.168.230.30:8080/"
+//    const val BASE_URL = "http://10.1.160.222:5207/"
+    const val BASE_URL = "http://autofeed-enbrgggphncjd4hd.southeastasia-01.azurewebsites.net/"
+
 
     fun getFullUrl(url: String?): String? {
         if (url.isNullOrEmpty()) return null
