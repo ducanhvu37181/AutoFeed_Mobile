@@ -240,7 +240,7 @@ fun EditLargeChickenView(
                                     if (healthStatus != chicken.healthStatus) changes.add("Health Status: '${chicken.healthStatus}' -> '$healthStatus'")
                                     val newWeight = weight.toDoubleOrNull() ?: chicken.weight
                                     if (newWeight != chicken.weight) changes.add("Weight: ${chicken.weight}kg -> ${newWeight}kg")
-                                    if (note.trim() != (chicken.note?.trim() ?: "")) changes.add("Notes updated")
+                                    if (note.trim() != (chicken.note?.trim() ?: "")) changes.add("Notes updated: '${note.trim()}'")
                                     if (selectedImageUri != null) changes.add("Avatar updated")
 
                                     if (changes.isNotEmpty()) {
