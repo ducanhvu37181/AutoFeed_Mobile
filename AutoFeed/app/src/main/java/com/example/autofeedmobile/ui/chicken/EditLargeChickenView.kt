@@ -135,7 +135,12 @@ fun EditLargeChickenView(
         // Weight
         OutlinedTextField(
             value = weight,
-            onValueChange = { weight = it },
+            onValueChange = { input ->
+                val cleaned = input.replace(',', '.')
+                if (cleaned.isEmpty() || cleaned == "." || cleaned.toDoubleOrNull() != null) {
+                    weight = cleaned
+                }
+            },
             label = { Text("Weight (kg)") },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -206,17 +211,43 @@ fun EditLargeChickenView(
                     isSubmitting = true
                     scope.launch {
                         try {
+                            val sanitizedWeight = weight.replace(',', '.')
                             // 1. Update Details
                             val updateDto = UpdateLargeChickenDto(
+                                chickenLid = chicken.chickenLid,
                                 flockId = chicken.flockId,
                                 name = name,
-                                weight = weight.toDoubleOrNull() ?: chicken.weight,
+                                weight = sanitizedWeight.toDoubleOrNull() ?: chicken.weight,
                                 age = chicken.age,
                                 healthStatus = healthStatus,
-                                note = note
+                                note = note,
+                                isActive = chicken.isActive
                             )
+                            android.util.Log.d("EditLargeChickenView", "Updating chicken ${chicken.chickenLid}")
+                            android.util.Log.d("EditLargeChickenView", "DTO Content - Name: $name, Weight: ${sanitizedWeight.toDoubleOrNull()}, Status: $healthStatus, Note: $note")
+                            android.util.Log.d("EditLargeChickenView", "DTO fields - chickenLid: ${updateDto.chickenLid}, flockId: ${updateDto.flockId}, name: ${updateDto.name}, weight: ${updateDto.weight}")
+
                             val updateResponse = RetrofitClient.instance.updateLargeChicken(chicken.chickenLid, updateDto)
-                            
+
+                            val responseLog = "Code: ${updateResponse.code()}, Success: ${updateResponse.isSuccessful}, Body: ${updateResponse.body()}"
+                            android.util.Log.d("EditLargeChickenView", "Response: $responseLog")
+                            android.util.Log.d("EditLargeChickenView", "Response body status: ${updateResponse.body()?.status}")
+                            android.util.Log.d("EditLargeChickenView", "Response body data: ${updateResponse.body()?.data}")
+                            if (!updateResponse.isSuccessful) {
+                                android.util.Log.e("EditLargeChickenView", "Error Body: ${updateResponse.errorBody()?.string()}")
+                            }
+
+                            if (updateResponse.isSuccessful && updateResponse.body()?.status == true) {
+                                // Fetch updated chicken data from API to get the actual new values
+                                val detailResponse = RetrofitClient.instance.getLargeChickenDetail(chicken.chickenLid)
+                                val updatedChicken = if (detailResponse.isSuccessful && detailResponse.body()?.status == true) {
+                                    detailResponse.body()?.data
+                                } else {
+                                    updateResponse.body()?.data
+                                }
+                                android.util.Log.d("EditLargeChickenView", "Updated chicken from API: $updatedChicken")
+                            }
+
                             // 2. Update Avatar if selected
                             var avatarSuccess = true
                             selectedImageUri?.let { uri ->
@@ -238,7 +269,8 @@ fun EditLargeChickenView(
                                     val changes = mutableListOf<String>()
                                     if (name.trim() != chicken.name) changes.add("Name: '${chicken.name}' -> '${name.trim()}'")
                                     if (healthStatus != chicken.healthStatus) changes.add("Health Status: '${chicken.healthStatus}' -> '$healthStatus'")
-                                    val newWeight = weight.toDoubleOrNull() ?: chicken.weight
+                                    val sanitizedWeight = weight.replace(',', '.')
+                                    val newWeight = sanitizedWeight.toDoubleOrNull() ?: chicken.weight
                                     if (newWeight != chicken.weight) changes.add("Weight: ${chicken.weight}kg -> ${newWeight}kg")
                                     if (note.trim() != (chicken.note?.trim() ?: "")) changes.add("Notes updated: '${note.trim()}'")
                                     if (selectedImageUri != null) changes.add("Avatar updated")
@@ -246,7 +278,7 @@ fun EditLargeChickenView(
                                     if (changes.isNotEmpty()) {
                                         val description = "User updated chicken details for '${chicken.name}' (ID: ${chicken.chickenLid}). Changes: ${changes.joinToString("; ")}"
                                         val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-                                        val typePart = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val typePart = "Chicken".toRequestBody("text/plain".toMediaTypeOrNull())
                                         val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
                                         
                                         RetrofitClient.instance.createReport(

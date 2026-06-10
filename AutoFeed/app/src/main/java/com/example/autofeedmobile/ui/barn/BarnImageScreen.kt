@@ -37,9 +37,13 @@ fun BarnImageScreen(
     LaunchedEffect(barnId) {
         val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
         try {
-            val response = RetrofitClient.instance.getBarnImagesByDate(barnId, today)
+            val response = RetrofitClient.instance.getBarnImages(barnId)
             if (response.isSuccessful) {
-                barnImages = response.body()?.data ?: emptyList()
+                val allImages = response.body()?.data ?: emptyList()
+                // Filter images for today and ensure they have a URL
+                barnImages = allImages.filter { imageData ->
+                    imageData.captureDate.startsWith(today) && imageData.imageUrl.isNotBlank()
+                }
             } else {
                 errorMessage = "Failed to load images: ${response.code()}"
             }

@@ -23,6 +23,7 @@ import com.example.autofeedmobile.network.FlockData
 import com.example.autofeedmobile.network.LargeChickenData
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.TransferFlockDto
+import com.example.autofeedmobile.util.formatWeight
 import com.example.autofeedmobile.util.formatDate
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -214,7 +215,7 @@ fun TransferBackFlockDialog(
                                 if (response.isSuccessful) {
                                     // Automatically send report
                                     try {
-                                        val typeBody = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val typeBody = "Chicken".toRequestBody("text/plain".toMediaTypeOrNull())
                                         val descBody = "System: Recovered flock '${sourceFlock.name}' (ID: ${sourceFlock.flockId}) has been moved back to active healthy flock '${selectedFlock!!.name}' (ID: ${selectedFlock!!.flockId}).".toRequestBody("text/plain".toMediaTypeOrNull())
                                         val userIdBody = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
                                         RetrofitClient.instance.createReport(userIdBody, typeBody, descBody, null)
@@ -406,7 +407,7 @@ fun TransferFlockDialog(
                                 if (response.isSuccessful) {
                                     // Automatically send report
                                     try {
-                                        val typeBody = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val typeBody = "Chicken".toRequestBody("text/plain".toMediaTypeOrNull())
                                         val descBody = "System: Sick flock '${sourceFlock.name}' (ID: ${sourceFlock.flockId}) has been moved to empty flock '${selectedFlock!!.name}' (ID: ${selectedFlock!!.flockId}) for isolation.".toRequestBody("text/plain".toMediaTypeOrNull())
                                         val userIdBody = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
                                         RetrofitClient.instance.createReport(userIdBody, typeBody, descBody, null)
@@ -547,7 +548,7 @@ fun FlockDetailContent(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.Scale,
                 label = "Weight",
-                value = "${flock.weight} kg"
+                value = formatWeight(flock.weight)
             )
             if (flock.isActive) {
                 DetailInfoCard(
@@ -718,7 +719,7 @@ fun LargeChickenDetailContent(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.MonitorWeight,
                 label = "Weight",
-                value = "${chicken.weight} kg"
+                value = formatWeight(chicken.weight)
             )
             DetailInfoCard(
                 modifier = Modifier.weight(1f),

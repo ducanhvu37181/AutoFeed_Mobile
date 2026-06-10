@@ -6,6 +6,7 @@ import retrofit2.http.*
 
 interface ApiService {
     @POST("api/User/reset-password")
+    @Headers("Content-Type: application/json")
     suspend fun forgotPassword(@Body dto: ResetPasswordDto): Response<Unit>
 
     @POST("api/Auth/login")
@@ -54,6 +55,7 @@ interface ApiService {
     ): Response<InventoryListResponse>
 
     @PUT("api/Inventory/{id}")
+    @Headers("Content-Type: application/json")
     suspend fun updateInventory(
         @Path("id") id: Int,
         @Body dto: UpdateInventoryDto
@@ -78,12 +80,14 @@ interface ApiService {
     suspend fun getUserProfile(@Path("id") id: Int): Response<UserProfileResponse>
 
     @PUT("api/User/{id}")
+    @Headers("Content-Type: application/json")
     suspend fun updateProfile(
         @Path("id") id: Int,
         @Body profile: UpdateProfileDto
     ): Response<Unit>
 
     @PATCH("api/User/{id}/change-password")
+    @Headers("Content-Type: application/json")
     suspend fun changePassword(
         @Path("id") id: Int,
         @Body dto: ChangePasswordDto
@@ -102,16 +106,18 @@ interface ApiService {
     @GET("api/Flock/{id}")
     suspend fun getFlockDetail(@Path("id") id: Int): Response<FlockDetailResponse>
 
-    @PUT("api/Flock/{id}")
+    @PUT("api/Flock")
+    @Headers("Content-Type: application/json")
     suspend fun updateFlock(
-        @Path("id") id: Int,
         @Body flock: UpdateFlockDto
-    ): Response<Unit>
+    ): Response<FlockDetailResponse>
 
     @PUT("api/Flock/transfer-quantity-to-flock")
+    @Headers("Content-Type: application/json")
     suspend fun transferFlock(@Body dto: TransferFlockDto): Response<Unit>
 
     @PUT("api/Flock/transfer-quantity-back-to-flock")
+    @Headers("Content-Type: application/json")
     suspend fun transferBackToFlock(@Body dto: TransferFlockDto): Response<Unit>
 
     @GET("api/LargeChicken")
@@ -121,10 +127,11 @@ interface ApiService {
     suspend fun getLargeChickenDetail(@Path("id") id: Int): Response<LargeChickenDetailResponse>
 
     @PUT("api/LargeChicken/{id}")
+    @Headers("Content-Type: application/json")
     suspend fun updateLargeChicken(
         @Path("id") id: Int,
         @Body chicken: UpdateLargeChickenDto
-    ): Response<Unit>
+    ): Response<LargeChickenDetailResponse>
 
     @Multipart
     @POST("api/LargeChicken/{id}/avatar")
@@ -134,17 +141,16 @@ interface ApiService {
     ): Response<Unit>
 
     @GET("api/Barn")
-    suspend fun getBarns(): Response<List<BarnData>>
+    suspend fun getBarns(): Response<BarnListResponse>
 
     @GET("api/Barn/{id}")
-    suspend fun getBarnDetail(@Path("id") id: Int): Response<BarnData>
+    suspend fun getBarnDetail(@Path("id") id: Int): Response<BarnDetailResponse>
 
-    @GET("api/BarnImage/barn/{barnId}/date")
-    suspend fun getBarnImagesByDate(
-        @Path("barnId") barnId: Int,
-        @Query("captureDate") captureDate: String
+    @GET("api/BarnImage/barn/{barnId}")
+    suspend fun getBarnImages(
+        @Path("barnId") barnId: Int
     ): Response<BarnImageListResponse>
 
     @GET("api/FeedingRule/barn/{barnId}")
-    suspend fun getFeedingRulesByBarn(@Path("barnId") barnId: Int): Response<List<FeedingRuleData>>
+    suspend fun getFeedingRulesByBarn(@Path("barnId") barnId: Int): Response<FeedingRuleListResponse>
 }

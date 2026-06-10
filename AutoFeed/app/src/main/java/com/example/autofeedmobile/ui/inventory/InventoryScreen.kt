@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,7 +52,7 @@ fun InventoryScreen(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var filterStatus by remember { mutableStateOf("All") } // "All", "In Stock", "Low Stock", "Expired"
+    var filterStatus by remember { mutableStateOf("All") } // "All", "In Stock", "Low Stock", "Out of Stock", "Expired"
     
     val scope = rememberCoroutineScope()
     var inventoryList by remember { mutableStateOf<List<InventoryData>>(emptyList()) }
@@ -249,16 +250,23 @@ fun InventoryScreen(
             // Summary Data Calculation
             val today = LocalDate.now()
             val counts = inventoryList.map { item ->
-                val isLowStock = (item.quantity ?: 0) <= 5
+                val quantity = item.quantity ?: 0
+                val isOutOfStock = quantity == 0
+                val isLowStock = quantity in 1..5
                 try {
                     val expireDate = LocalDate.parse(item.expiredDate?.split("T")?.get(0) ?: "")
                     when {
+                        isOutOfStock -> "Out of Stock"
                         expireDate.isBefore(today) -> "Expired"
                         isLowStock -> "Low Stock"
                         else -> "In Stock"
                     }
                 } catch (e: Exception) {
-                    if (isLowStock) "Low Stock" else "In Stock"
+                    when {
+                        isOutOfStock -> "Out of Stock"
+                        isLowStock -> "Low Stock"
+                        else -> "In Stock"
+                    }
                 }
             }.groupingBy { it }.eachCount()
 
@@ -282,6 +290,13 @@ fun InventoryScreen(
                     label = "Low Stock",
                     value = (counts["Low Stock"] ?: 0).toString(),
                     color = Color(0xFFFFF3E0)
+                )
+                InventorySummaryCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Error,
+                    label = "Out of Stock",
+                    value = (counts["Out of Stock"] ?: 0).toString(),
+                    color = Color(0xFFF5F5F5)
                 )
                 InventorySummaryCard(
                     modifier = Modifier.weight(1f),
@@ -313,11 +328,12 @@ fun InventoryScreen(
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
-                    Row(
+                    LazyRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf("All", "In Stock", "Low Stock", "Expired").forEach { status ->
+                        val filterOptions = listOf("All", "In Stock", "Low Stock", "Out of Stock", "Expired")
+                        items(filterOptions) { status ->
                             FilterChip(
                                 selected = filterStatus == status,
                                 onClick = { filterStatus = status },
@@ -348,38 +364,53 @@ fun InventoryScreen(
                     
                     if (!matchesSearch) return@filter false
                     
-                    val isLowStock = (it.quantity ?: 0) <= 5
+                    val quantity = it.quantity ?: 0
+                    val isOutOfStock = quantity == 0
+                    val isLowStock = quantity in 1..5
                     val status = try {
                         val expireDate = LocalDate.parse(it.expiredDate?.split("T")?.get(0) ?: "")
                         val today = LocalDate.now()
                         when {
+                            isOutOfStock -> "Out of Stock"
                             expireDate.isBefore(today) -> "Expired"
                             isLowStock -> "Low Stock"
                             else -> "In Stock"
                         }
                     } catch (e: Exception) {
-                        if (isLowStock) "Low Stock" else "In Stock"
+                        when {
+                            isOutOfStock -> "Out of Stock"
+                            isLowStock -> "Low Stock"
+                            else -> "In Stock"
+                        }
                     }
                     
                     when (filterStatus) {
                         "All" -> true
                         "In Stock" -> status == "In Stock"
                         "Low Stock" -> status == "Low Stock"
+                        "Out of Stock" -> status == "Out of Stock"
                         "Expired" -> status == "Expired"
                         else -> true
                     }
                 }.sortedWith(compareByDescending<InventoryData> { 
-                    val isLowStock = (it.quantity ?: 0) <= 5
+                    val quantity = it.quantity ?: 0
+                    val isOutOfStock = quantity == 0
+                    val isLowStock = quantity in 1..5
                     try {
                         val expireDate = LocalDate.parse(it.expiredDate?.split("T")?.get(0) ?: "")
                         val today = LocalDate.now()
                         when {
                             expireDate.isBefore(today) -> 0 // Expired last
-                            isLowStock -> 1 // Low Stock middle
-                            else -> 2 // In Stock first
+                            isOutOfStock -> 0.5
+                            isLowStock -> 1
+                            else -> 2
                         }
                     } catch (e: Exception) {
-                        if (isLowStock) 1 else 2
+                        when {
+                            isOutOfStock -> 0.5
+                            isLowStock -> 1
+                            else -> 2
+                        }
                     }
                 }.thenBy { it.foodName })
 
@@ -394,7 +425,9 @@ fun InventoryScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(filteredList) { item ->
-                            val isLowStock = (item.quantity ?: 0) <= 5
+                            val quantity = item.quantity ?: 0
+                            val isOutOfStock = quantity == 0
+                            val isLowStock = quantity in 1..5
                             
                             val (status, statusColor) = try {
                                 val expireDate = LocalDate.parse(item.expiredDate?.split("T")?.get(0) ?: "")
@@ -402,13 +435,18 @@ fun InventoryScreen(
                                 val daysUntil = ChronoUnit.DAYS.between(today, expireDate)
                                 
                                 when {
+                                    isOutOfStock -> "Out of Stock" to Color.Gray
                                     expireDate.isBefore(today) -> "Expired" to Color.Red
                                     daysUntil <= 3 -> "Nearly Expired" to Color(0xFFF57C00) // Orange
                                     isLowStock -> "Low Stock" to Color.Red
                                     else -> "In Stock" to Color(0xFF00897B)
                                 }
                             } catch (e: Exception) {
-                                (if (isLowStock) "Low Stock" else "In Stock") to (if (isLowStock) Color.Red else Color(0xFF00897B))
+                                when {
+                                    isOutOfStock -> "Out of Stock" to Color.Gray
+                                    isLowStock -> "Low Stock" to Color.Red
+                                    else -> "In Stock" to Color(0xFF00897B)
+                                }
                             }
 
                             InventoryItemCard(
@@ -538,7 +576,7 @@ fun InventoryItemCard(
     statusColor: Color,
     onClick: () -> Unit
 ) {
-    val isWarning = status == "Low Stock" || status == "Expired" || status == "Nearly Expired"
+    val isWarning = status == "Low Stock" || status == "Expired" || status == "Nearly Expired" || status == "Out of Stock"
     
     Card(
         modifier = Modifier
@@ -569,7 +607,7 @@ fun InventoryItemCard(
                 Text(name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(quantity, fontWeight = FontWeight.Bold, color = if (status == "Low Stock") Color.Red else Color.Black)
+                Text(quantity, fontWeight = FontWeight.Bold, color = if (status == "Low Stock" || status == "Out of Stock") Color.Red else Color.Black)
                 Surface(
                     shape = RoundedCornerShape(4.dp),
                     color = statusColor.copy(alpha = 0.1f)

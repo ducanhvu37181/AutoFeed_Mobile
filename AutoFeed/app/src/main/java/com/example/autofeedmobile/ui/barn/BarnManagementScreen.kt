@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.BarnData
 import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.util.formatAmount
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -49,6 +51,13 @@ fun BarnManagementScreen(
     var isLoading by remember { mutableStateOf(true) }
     var showMenu by remember { mutableStateOf(false) }
     var selectedBarnId by remember { mutableStateOf<Int?>(null) }
+    var selectedTypeFilter by remember { mutableStateOf("All") }
+    
+    val filteredBarns = remember(barns, selectedTypeFilter) {
+        if (selectedTypeFilter == "All") barns
+        else barns.filter { it.type.contains(selectedTypeFilter, ignoreCase = true) }
+    }
+
     val scope = rememberCoroutineScope()
 
     // Real-time polling every 5 seconds
@@ -58,7 +67,7 @@ fun BarnManagementScreen(
                 android.util.Log.d("BarnManagementScreen", "Fetching barns...")
                 val response = RetrofitClient.instance.getBarns()
                 if (response.isSuccessful) {
-                    val barnList = response.body() ?: emptyList()
+                    val barnList = response.body()?.data ?: emptyList()
                     android.util.Log.d("BarnManagementScreen", "Fetched ${barnList.size} barns")
                     barns = barnList
                 } else {
@@ -163,21 +172,46 @@ fun BarnManagementScreen(
             }
         }
     ) { innerPadding ->
-        if (isLoading && barns.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFF00897B))
-            }
-        } else {
-            LazyColumn(
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .background(Color(0xFFF5F5F5))
+        ) {
+            // Filter chips
+            LazyRow(
                 modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize()
-                    .background(Color(0xFFF5F5F5)),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(barns) { barn ->
-                    BarnItem(barn = barn, onClick = { selectedBarnId = barn.barnId })
+                val filters = listOf("All", "Flock", "Large")
+                items(filters) { filter ->
+                    FilterChip(
+                        selected = selectedTypeFilter == filter,
+                        onClick = { selectedTypeFilter = filter },
+                        label = { Text(filter) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF00897B),
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+            }
+
+            if (isLoading && barns.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF00897B))
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(filteredBarns) { barn ->
+                        BarnItem(barn = barn, onClick = { selectedBarnId = barn.barnId })
+                    }
                 }
             }
         }
@@ -232,7 +266,7 @@ fun BarnItem(barn: BarnData, onClick: () -> Unit) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 RealTimeInfo(icon = Icons.Default.Thermostat, label = "Temp", value = "${barn.temperature}°C", color = Color(0xFFFF5722))
                 RealTimeInfo(icon = Icons.Default.WaterDrop, label = "Humid", value = "${barn.humidity}%", color = Color(0xFF2196F3))
-                RealTimeInfo(icon = Icons.Default.Restaurant, label = "Food", value = "${barn.foodAmount}g", color = Color(0xFF4CAF50))
+                RealTimeInfo(icon = Icons.Default.Restaurant, label = "Food", value = formatAmount(barn.foodAmount), color = Color(0xFF4CAF50))
                 RealTimeInfo(icon = Icons.Default.Opacity, label = "Water", value = "${barn.waterAmount}%", color = Color(0xFF03A9F4))
             }
         }

@@ -151,7 +151,7 @@ fun DashboardScreen(
                 // Fetch Barns for Summary
                 val barnResponse = RetrofitClient.instance.getBarns()
                 if (barnResponse.isSuccessful) {
-                    barns = barnResponse.body() ?: emptyList()
+                    barns = barnResponse.body()?.data ?: emptyList()
                 }
 
                 // Fetch Flocks for health check

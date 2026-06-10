@@ -124,7 +124,12 @@ fun EditFlockView(
         // Weight
         OutlinedTextField(
             value = weight,
-            onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) weight = it },
+            onValueChange = { input ->
+                val cleaned = input.replace(',', '.')
+                if (cleaned.isEmpty() || cleaned == "." || cleaned.toDoubleOrNull() != null) {
+                    weight = cleaned
+                }
+            },
             label = { Text("Weight (kg)") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
@@ -164,16 +169,36 @@ fun EditFlockView(
                     isSubmitting = true
                     scope.launch {
                         try {
+                            val sanitizedWeight = weight.replace(',', '.')
                             val updateDto = UpdateFlockDto(
-                                flockId = flock.flockId,
+                                flockID = flock.flockId,
                                 name = name,
+                                quantity = flock.quantity,
+                                weight = sanitizedWeight.toDoubleOrNull() ?: flock.weight,
                                 healthStatus = healthStatus,
-                                weight = weight.toDoubleOrNull() ?: flock.weight,
-                                note = note
+                                note = note,
+                                ageInMonths = flock.ageInMonths,
+                                isActive = flock.isActive
                             )
-                            val updateResponse = RetrofitClient.instance.updateFlock(flock.flockId, updateDto)
+                            android.util.Log.d("EditFlockView", "Updating flock ${flock.flockId} with DTO: $updateDto")
+                            android.util.Log.d("EditFlockView", "DTO fields - flockID: ${updateDto.flockID}, name: ${updateDto.name}, weight: ${updateDto.weight}, healthStatus: ${updateDto.healthStatus}")
+                            val updateResponse = RetrofitClient.instance.updateFlock(updateDto)
 
-                            if (updateResponse.isSuccessful) {
+                            android.util.Log.d("EditFlockView", "Response code: ${updateResponse.code()}, isSuccessful: ${updateResponse.isSuccessful}")
+                            android.util.Log.d("EditFlockView", "Response body: ${updateResponse.body()}")
+                            android.util.Log.d("EditFlockView", "Response body success: ${updateResponse.body()?.status}")
+                            android.util.Log.d("EditFlockView", "Response body data: ${updateResponse.body()?.data}")
+                            android.util.Log.d("EditFlockView", "Error body: ${updateResponse.errorBody()?.string()}")
+
+                            if (updateResponse.isSuccessful && updateResponse.body()?.status == true) {
+                                // Fetch updated flock data from API to get the actual new values
+                                val detailResponse = RetrofitClient.instance.getFlockDetail(flock.flockId)
+                                val updatedFlock = if (detailResponse.isSuccessful && detailResponse.body()?.status == true) {
+                                    detailResponse.body()?.data
+                                } else {
+                                    updateResponse.body()?.data
+                                }
+                                android.util.Log.d("EditFlockView", "Updated flock from API: $updatedFlock")
                                 // Automatically send report
                                 try {
                                     val changes = mutableListOf<String>()
@@ -188,7 +213,7 @@ fun EditFlockView(
                                     if (changes.isNotEmpty()) {
                                         val description = "User updated flock details for '${flock.name}' (ID: ${flock.flockId}). Changes: ${changes.joinToString("; ")}"
                                         val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-                                        val typePart = "Flock".toRequestBody("text/plain".toMediaTypeOrNull())
+                                        val typePart = "Chicken".toRequestBody("text/plain".toMediaTypeOrNull())
                                         val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
                                         
                                         RetrofitClient.instance.createReport(

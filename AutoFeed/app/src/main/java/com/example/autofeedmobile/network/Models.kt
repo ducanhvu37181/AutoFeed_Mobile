@@ -159,6 +159,7 @@ data class ResetPasswordDto(
 )
 
 data class FlockData(
+    @SerializedName(value = "flockId", alternate = ["flockID"])
     val flockId: Int,
     val name: String,
     val quantity: Int,
@@ -176,19 +177,23 @@ data class FlockData(
 )
 
 data class FlockListResponse(
-    val success: Boolean,
+    val status: Boolean,
+    val httpCode: Int,
     val data: List<FlockData>,
     val description: String?
 )
 
 data class FlockDetailResponse(
-    val success: Boolean,
+    val status: Boolean,
+    val httpCode: Int,
     val data: FlockData,
     val description: String?
 )
 
 data class LargeChickenData(
+    @SerializedName(value = "chickenLid", alternate = ["chickenLID"])
     val chickenLid: Int,
+    @SerializedName(value = "flockId", alternate = ["flockID"])
     val flockId: Int,
     val name: String,
     val weight: Double,
@@ -206,20 +211,41 @@ data class LargeChickenData(
 )
 
 data class UpdateLargeChickenDto(
+    @SerializedName("chickenLid")
+    val chickenLid: Int,
+    @SerializedName("flockId")
     val flockId: Int,
+    @SerializedName("name")
     val name: String,
+    @SerializedName("weight")
     val weight: Double,
+    @SerializedName("age")
     val age: Int,
+    @SerializedName("healthStatus")
     val healthStatus: String,
-    val note: String?
+    @SerializedName("note")
+    val note: String?,
+    @SerializedName("isActive")
+    val isActive: Boolean = true
 )
 
 data class UpdateFlockDto(
-    val flockId: Int,
+    @SerializedName(value = "flockID", alternate = ["flockId"])
+    val flockID: Int,
+    @SerializedName("name")
     val name: String,
-    val healthStatus: String,
+    @SerializedName("quantity")
+    val quantity: Int,
+    @SerializedName("weight")
     val weight: Double,
-    val note: String?
+    @SerializedName("healthStatus")
+    val healthStatus: String,
+    @SerializedName("note")
+    val note: String?,
+    @SerializedName("ageInMonths")
+    val ageInMonths: Int,
+    @SerializedName("isActive")
+    val isActive: Boolean = true
 )
 
 data class TransferFlockDto(
@@ -298,7 +324,7 @@ data class FoodRuleDetailData(
     val foodName: String,
     val feedHour: Int,
     val feedMinute: Int,
-    val amount: Int,
+    val amount: Double,
     val description: String?,
     val status: Boolean
 )
@@ -315,4 +341,11 @@ data class FeedingRuleData(
     val flockName: String?,
     val status: String,
     val details: List<FoodRuleDetailData>
+)
+
+data class FeedingRuleListResponse(
+    val status: Boolean,
+    val httpCode: Int,
+    val data: List<FeedingRuleData>,
+    val description: String?
 )

@@ -31,6 +31,7 @@ import com.example.autofeedmobile.network.FlockData
 import com.example.autofeedmobile.network.LargeChickenData
 import com.example.autofeedmobile.network.RetrofitClient
 import com.example.autofeedmobile.network.TransferFlockDto
+import com.example.autofeedmobile.util.formatWeight
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -340,7 +341,7 @@ fun FlockItem(flock: FlockData, onClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(4.dp))
                 val quantityPart = if (flock.isActive) "${flock.quantity} Birds | " else ""
                 Text(
-                    text = "$quantityPart${flock.weight} kg",
+                    text = "$quantityPart${formatWeight(flock.weight)}",
                     fontSize = 14.sp,
                     color = Color.DarkGray,
                     fontWeight = FontWeight.Medium
@@ -435,7 +436,7 @@ fun LargeChickenItem(chicken: LargeChickenData, onClick: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${chicken.weight} kg",
+                        text = formatWeight(chicken.weight),
                         fontSize = 14.sp,
                         color = Color.DarkGray,
                         fontWeight = FontWeight.Medium

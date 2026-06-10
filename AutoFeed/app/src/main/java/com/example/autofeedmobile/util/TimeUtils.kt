@@ -1,5 +1,9 @@
 package com.example.autofeedmobile.util
 
+import java.text.DecimalFormat
+
+private val decimalFormat = DecimalFormat("#.##")
+
 fun formatTimeOnly(timeString: String?): String {
     if (timeString == null) return "N/A"
     return try {
@@ -39,4 +43,12 @@ fun formatDate(dateString: String?): String {
     } catch (e: Exception) {
         dateString ?: "N/A"
     }
+}
+
+fun formatAmount(amount: Double): String {
+    return "${decimalFormat.format(amount)}g"
+}
+
+fun formatWeight(weight: Double): String {
+    return "${decimalFormat.format(weight)} kg"
 }

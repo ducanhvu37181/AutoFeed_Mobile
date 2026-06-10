@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.example.autofeedmobile.network.FeedingRuleData
 import com.example.autofeedmobile.network.FoodRuleDetailData
 import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.util.formatAmount
 import com.example.autofeedmobile.util.formatDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,7 +36,7 @@ fun FeedingRuleScreen(
         try {
             val response = RetrofitClient.instance.getFeedingRulesByBarn(barnId)
             if (response.isSuccessful) {
-                feedingRules = response.body() ?: emptyList()
+                feedingRules = response.body()?.data ?: emptyList()
             } else {
                 errorMessage = "Failed to load feeding rules: ${response.code()}"
             }
@@ -173,7 +174,7 @@ fun FeedingDetailRow(detail: FoodRuleDetailData) {
             }
         }
         Text(
-            text = "${detail.amount}g",
+            text = formatAmount(detail.amount),
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF00897B)

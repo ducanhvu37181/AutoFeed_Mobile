@@ -24,6 +24,7 @@ import coil.compose.AsyncImage
 import com.example.autofeedmobile.network.BarnData
 import com.example.autofeedmobile.network.BarnImageData
 import com.example.autofeedmobile.network.RetrofitClient
+import com.example.autofeedmobile.util.formatAmount
 import com.example.autofeedmobile.util.formatDate
 import kotlinx.coroutines.delay
 import java.time.LocalDate
@@ -40,7 +41,7 @@ fun BarnDetailView(barnId: Int, onViewImages: () -> Unit, onViewFeedingRules: ()
             try {
                 val response = RetrofitClient.instance.getBarnDetail(barnId)
                 if (response.isSuccessful) {
-                    barn = response.body()
+                    barn = response.body()?.data
                 }
             } catch (e: Exception) {
                 // Silent error
@@ -137,7 +138,7 @@ fun BarnDetailView(barnId: Int, onViewImages: () -> Unit, onViewFeedingRules: ()
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Restaurant,
                     label = "Food Amount",
-                    value = "${barn!!.foodAmount}g",
+                    value = formatAmount(barn!!.foodAmount),
                     color = Color(0xFF4CAF50)
                 )
                 RealTimeDetailCard(
@@ -163,21 +164,21 @@ fun BarnDetailView(barnId: Int, onViewImages: () -> Unit, onViewFeedingRules: ()
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Today,
                     label = "Today",
-                    value = "${barn!!.foodToday ?: 0.0}g",
+                    value = formatAmount(barn!!.foodToday ?: 0.0),
                     color = Color(0xFF4CAF50)
                 )
                 RealTimeDetailCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.DateRange,
                     label = "This Week",
-                    value = "${barn!!.foodWeek ?: 0.0}g",
+                    value = formatAmount(barn!!.foodWeek ?: 0.0),
                     color = Color(0xFFFF9800)
                 )
                 RealTimeDetailCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.CalendarMonth,
                     label = "This Month",
-                    value = "${barn!!.foodMonth ?: 0.0}g",
+                    value = formatAmount(barn!!.foodMonth ?: 0.0),
                     color = Color(0xFF9C27B0)
                 )
             }
